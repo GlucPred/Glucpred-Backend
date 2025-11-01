@@ -1,0 +1,164 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # BASES DE DATOS
+  # ==========================================
+  
+  # MySQL Database for Authentication Service
+  auth-db:
+    image: mysql:8.0
+    container_name: glucpred-auth-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: glucpred_root_2024
+      MYSQL_DATABASE: auth_db
+      MYSQL_USER: auth_user
+      MYSQL_PASSWORD: auth_pass_2024
+    ports:
+      - "3307:3306"
+    volumes:
+      - auth_db_data:/var/lib/mysql
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pglucpred_root_2024"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    command: --default-authentication-plugin=mysql_native_password
+
+  # MySQL Database for Profile Service
+  profile-db:
+    image: mysql:8.0
+    container_name: glucpred-profile-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: glucpred_root_2024
+      MYSQL_DATABASE: profile_db
+      MYSQL_USER: profile_user
+      MYSQL_PASSWORD: profile_pass_2024
+    ports:
+      - "3308:3306"
+    volumes:
+      - profile_db_data:/var/lib/mysql
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pglucpred_root_2024"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    command: --default-authentication-plugin=mysql_native_password
+
+  # ==========================================
+  # MICROSERVICIOS
+  # ==========================================
+  
+  # Authentication Service
+  authentication-service:
+    image: authentication-service:latest
+    container_name: glucpred-auth-service
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      # Database Configuration
+      DATABASE_URL: mysql+pymysql://auth_user:auth_pass_2024@auth-db:3306/auth_db?charset=utf8mb4
+      # JWT Configuration
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+      JWT_EXPIRATION_HOURS: 24
+      # Flask Configuration
+      SECRET_KEY: glucpred-flask-secret-key-2024
+      DEBUG: "False"
+      SQLALCHEMY_ECHO: "False"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/auth/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Profile Service
+  profile-service:
+    image: profile-service:latest
+    container_name: glucpred-profile-service
+    restart: always
+    ports:
+      - "8082:8082"
+    environment:
+      # Database Configuration
+      DATABASE_URL: mysql+pymysql://profile_user:profile_pass_2024@profile-db:3306/profile_db?charset=utf8mb4
+      # JWT Configuration (debe coincidir con auth-service)
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+      JWT_EXPIRATION_HOURS: 24
+      # Flask Configuration
+      SECRET_KEY: glucpred-flask-secret-key-2024
+      DEBUG: "False"
+      SQLALCHEMY_ECHO: "False"
+    depends_on:
+      profile-db:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/api/profile/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ==========================================
+  # API GATEWAY (con Swagger)
+  # ==========================================
+  
+  api-gateway:
+    image: api-gateway:latest
+    container_name: glucpred-api-gateway
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      # Service URLs
+      AUTH_SERVICE_URL: http://authentication-service:8081
+      PROFILE_SERVICE_URL: http://profile-service:8082
+      # Request Configuration
+      REQUEST_TIMEOUT: 30
+      # Flask Configuration
+      SECRET_KEY: glucpred-gateway-secret-key-2024
+      DEBUG: "False"
+    depends_on:
+      authentication-service:
+        condition: service_healthy
+      profile-service:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# ==========================================
+# NETWORKS & VOLUMES
+# ==========================================
+
+networks:
+  glucpred-network:
+    name: glucpred-network
+    driver: bridge
+
+volumes:
+  auth_db_data:
+    name: glucpred_auth_db_data
+  profile_db_data:
+    name: glucpred_profile_db_data
