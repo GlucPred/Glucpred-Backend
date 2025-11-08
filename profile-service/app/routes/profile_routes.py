@@ -14,7 +14,6 @@ def create_profile():
     Create a new profile
     Expected JSON:
     {
-        "user_id": int,
         "edad": int (optional),
         "peso": float (optional),
         "altura": float (optional),
@@ -24,7 +23,13 @@ def create_profile():
     }
     """
     try:
+        # Get user_id from JWT token (set by middleware)
+        user_id = request.current_user.get('user_id')
+        
         data = request.get_json()
+        # Add user_id from token to data
+        data['user_id'] = user_id
+        
         profile_dict, error = ProfileService.create_profile(data)
         
         if profile_dict is None:
@@ -42,11 +47,14 @@ def create_profile():
         }), 500
 
 
-@bp.route('/<int:user_id>', methods=['GET'])
+@bp.route('', methods=['GET'])
 @token_required
-def get_profile(user_id):
-    """Get profile by user_id"""
+def get_profile():
+    """Get profile of authenticated user"""
     try:
+        # Get user_id from JWT token (set by middleware)
+        user_id = request.current_user.get('user_id')
+        
         profile_dict, error = ProfileService.get_profile(user_id)
         
         if profile_dict is None:
@@ -60,11 +68,11 @@ def get_profile(user_id):
         }), 500
 
 
-@bp.route('/<int:user_id>', methods=['PUT'])
+@bp.route('', methods=['PUT'])
 @token_required
-def update_profile(user_id):
+def update_profile():
     """
-    Update profile by user_id
+    Update profile of authenticated user
     Expected JSON (all fields optional):
     {
         "edad": int,
@@ -76,6 +84,9 @@ def update_profile(user_id):
     }
     """
     try:
+        # Get user_id from JWT token (set by middleware)
+        user_id = request.current_user.get('user_id')
+        
         data = request.get_json()
         profile_dict, error = ProfileService.update_profile(user_id, data)
         

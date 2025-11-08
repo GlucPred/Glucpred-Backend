@@ -23,12 +23,7 @@ def create_profile(headers):
         required: true
         schema:
           type: object
-          required:
-            - user_id
           properties:
-            user_id:
-              type: integer
-              example: 1
             edad:
               type: integer
               example: 45
@@ -79,22 +74,16 @@ def create_profile(headers):
     )
 
 
-@bp.route('/<int:user_id>', methods=['GET'])
+@bp.route('', methods=['GET'])
 @extract_auth_header
-def get_profile(user_id, headers):
+def get_profile(headers):
     """
-    Obtener perfil de paciente
+    Obtener perfil de paciente autenticado
     ---
     tags:
       - Profile
     security:
       - Bearer: []
-    parameters:
-      - in: path
-        name: user_id
-        type: integer
-        required: true
-        description: ID del usuario
     responses:
       200:
         description: Perfil encontrado
@@ -129,28 +118,23 @@ def get_profile(user_id, headers):
     """
     return ServiceProxy.forward_request(
         Config.PROFILE_SERVICE_URL,
-        f'/api/profile/{user_id}',
+        '/api/profile',
         method='GET',
         headers=headers
     )
 
 
-@bp.route('/<int:user_id>', methods=['PUT'])
+@bp.route('', methods=['PUT'])
 @extract_auth_header
-def update_profile(user_id, headers):
+def update_profile(headers):
     """
-    Actualizar perfil de paciente
+    Actualizar perfil de paciente autenticado
     ---
     tags:
       - Profile
     security:
       - Bearer: []
     parameters:
-      - in: path
-        name: user_id
-        type: integer
-        required: true
-        description: ID del usuario
       - in: body
         name: body
         description: Datos a actualizar (todos opcionales)
@@ -198,7 +182,7 @@ def update_profile(user_id, headers):
     data = request.get_json()
     return ServiceProxy.forward_request(
         Config.PROFILE_SERVICE_URL,
-        f'/api/profile/{user_id}',
+        '/api/profile',
         method='PUT',
         data=data,
         headers=headers

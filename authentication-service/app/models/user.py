@@ -14,6 +14,7 @@ class User(db.Model):
     numero_celular = db.Column(db.String(20), nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     rol = db.Column(db.Enum('Paciente', 'Medico'), nullable=False, default='Paciente')
+    primer_inicio_sesion = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -34,6 +35,7 @@ class User(db.Model):
             'email': self.email,
             'numero_celular': self.numero_celular,
             'rol': self.rol,
+            'primer_inicio_sesion': self.primer_inicio_sesion,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
     
