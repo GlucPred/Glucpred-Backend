@@ -40,7 +40,7 @@ def create_app():
                     logger.error(f"Failed to connect to database after {max_retries} attempts")
                     raise
     
-    # Start Kafka event consumer
-    EventConsumer.start()
+    # Start Kafka event consumer (pass app context)
+    EventConsumer.start(app)
     
     return app
