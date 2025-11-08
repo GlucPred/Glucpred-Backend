@@ -78,3 +78,25 @@ def health():
         'status': 'healthy',
         'service': 'authentication-service'
     }), 200
+
+
+@bp.route('/internal/mark-profile-complete/<int:user_id>', methods=['POST'])
+def mark_profile_complete(user_id):
+    """
+    Internal endpoint to mark user as having completed initial profile setup
+    This should only be called by other microservices (profile-service)
+    """
+    try:
+        success, error = AuthService.mark_profile_complete(user_id)
+        
+        if not success:
+            return jsonify({'error': error}), 404
+        
+        return jsonify({
+            'message': 'Usuario marcado como configurado'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error interno del servidor: {str(e)}'
+        }), 500

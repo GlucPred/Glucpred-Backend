@@ -85,21 +85,35 @@ class AuthService:
         if not user.check_password(password):
             return None, 'Credenciales inválidas'
         
-        # Check if it's the first login and update the flag
-        is_first_login = user.primer_inicio_sesion
-        if is_first_login:
-            try:
-                user.primer_inicio_sesion = False
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                # Continue even if update fails, it's not critical
-        
         # Generate token
         token = JWTHandler.generate_token(user)
         
-        # Include first login info in response
-        user_dict = user.to_dict()
-        user_dict['es_primer_inicio'] = is_first_login
+        # Return user info (primer_inicio_sesion will be changed when profile is created/updated)
+        return user.to_dict(), token
+    
+    @staticmethod
+    def mark_profile_complete(user_id):
+        """
+        Mark user as having completed initial profile setup
         
-        return user_dict, token
+        Args:
+            user_id (int): User ID
+            
+        Returns:
+            tuple: (success, error_message)
+        """
+        try:
+            user = User.query.get(user_id)
+            
+            if not user:
+                return False, 'Usuario no encontrado'
+            
+            if user.primer_inicio_sesion:
+                user.primer_inicio_sesion = False
+                db.session.commit()
+            
+            return True, None
+            
+        except Exception as e:
+            db.session.rollback()
+            return False, f'Error al actualizar usuario: {str(e)}'
