@@ -100,3 +100,55 @@ def mark_profile_complete(user_id):
         return jsonify({
             'error': f'Error interno del servidor: {str(e)}'
         }), 500
+
+
+@bp.route('/internal/user/<int:user_id>', methods=['GET'])
+def get_user_data(user_id):
+    """
+    Internal endpoint to get user data
+    Used by API Gateway to combine with profile data
+    """
+    try:
+        user_dict, error = AuthService.get_user_data(user_id)
+        
+        if user_dict is None:
+            return jsonify({'error': error}), 404
+        
+        return jsonify({'user': user_dict}), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error interno del servidor: {str(e)}'
+        }), 500
+
+
+@bp.route('/internal/user/<int:user_id>', methods=['PUT'])
+def update_user_data(user_id):
+    """
+    Internal endpoint to update user data
+    Used by API Gateway when updating profile
+    Expected JSON (all optional):
+    {
+        "nombre_completo": "string",
+        "email": "string",
+        "username": "string",
+        "numero_celular": "string"
+    }
+    """
+    try:
+        data = request.get_json()
+        user_dict, error = AuthService.update_user_data(user_id, data)
+        
+        if user_dict is None:
+            status_code = 400 if 'uso' in error or 'registrado' in error else 404
+            return jsonify({'error': error}), status_code
+        
+        return jsonify({
+            'message': 'Datos de usuario actualizados',
+            'user': user_dict
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error interno del servidor: {str(e)}'
+        }), 500

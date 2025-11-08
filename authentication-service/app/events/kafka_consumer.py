@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import threading
-from app.services import AuthService
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +13,21 @@ class EventConsumer:
     _consumer = None
     _consumer_thread = None
     _running = False
+    _app = None
     
     @classmethod
-    def start(cls):
-        """Start Kafka consumer in background thread"""
+    def start(cls, app):
+        """
+        Start Kafka consumer in background thread
+        
+        Args:
+            app: Flask application instance (needed for app context)
+        """
         if cls._running:
             logger.warning("Event consumer already running")
             return
         
+        cls._app = app
         cls._running = True
         cls._consumer_thread = threading.Thread(target=cls._consume_events, daemon=True)
         cls._consumer_thread.start()
@@ -32,6 +38,8 @@ class EventConsumer:
         """Consume events from Kafka"""
         try:
             bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+            logger.info(f"Attempting to connect to Kafka at {bootstrap_servers}")
+            
             consumer = KafkaConsumer(
                 'profile-events',
                 bootstrap_servers=bootstrap_servers,
@@ -42,26 +50,31 @@ class EventConsumer:
                 consumer_timeout_ms=1000  # Check running status every second
             )
             cls._consumer = consumer
-            logger.info(f"Kafka consumer connected to {bootstrap_servers}, subscribed to 'profile-events'")
+            logger.info(f"Kafka consumer connected successfully, subscribed to 'profile-events'")
             
             while cls._running:
                 try:
                     # Poll for messages
                     messages = consumer.poll(timeout_ms=1000)
                     
+                    if messages:
+                        logger.info(f"Received {sum(len(records) for records in messages.values())} message(s)")
+                    
                     for topic_partition, records in messages.items():
                         for record in records:
+                            logger.info(f"Processing message from offset {record.offset}")
                             cls._handle_event(record.value)
                             
                 except Exception as e:
-                    logger.error(f"Error consuming message: {e}")
+                    logger.error(f"Error consuming message: {e}", exc_info=True)
                     
         except Exception as e:
-            logger.error(f"Failed to start Kafka consumer: {e}")
+            logger.error(f"Failed to start Kafka consumer: {e}", exc_info=True)
         finally:
             if cls._consumer:
                 cls._consumer.close()
                 cls._consumer = None
+                logger.info("Kafka consumer closed")
     
     @classmethod
     def _handle_event(cls, event):
@@ -72,6 +85,7 @@ class EventConsumer:
             event (dict): Event data
         """
         event_type = event.get('event_type')
+        logger.info(f"Handling event: {event_type}")
         
         if event_type == 'ProfileCreated':
             cls._handle_profile_created(event)
@@ -87,19 +101,33 @@ class EventConsumer:
             event (dict): Event data containing user_id and profile info
         """
         user_id = event.get('user_id')
+        logger.info(f"ProfileCreated event data: {event}")
+        
         if not user_id:
             logger.error("ProfileCreated event missing user_id")
             return
         
-        logger.info(f"Received ProfileCreated event for user {user_id}")
+        logger.info(f"Processing ProfileCreated event for user {user_id}")
         
-        # Mark user as having completed profile setup
-        success, error = AuthService.mark_profile_complete(user_id)
+        # Use Flask app context for database operations
+        if not cls._app:
+            logger.error("Flask app not available, cannot process event")
+            return
         
-        if success:
-            logger.info(f"Successfully marked user {user_id} as profile complete")
-        else:
-            logger.error(f"Failed to mark user {user_id} as profile complete: {error}")
+        try:
+            with cls._app.app_context():
+                from app.services import AuthService
+                
+                # Mark user as having completed profile setup
+                logger.info(f"Calling mark_profile_complete for user {user_id}")
+                success, error = AuthService.mark_profile_complete(user_id)
+                
+                if success:
+                    logger.info(f"✅ Successfully marked user {user_id} as profile complete")
+                else:
+                    logger.error(f"❌ Failed to mark user {user_id} as profile complete: {error}")
+        except Exception as e:
+            logger.error(f"Exception while handling ProfileCreated: {e}", exc_info=True)
     
     @classmethod
     def stop(cls):

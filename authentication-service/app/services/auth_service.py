@@ -117,3 +117,70 @@ class AuthService:
         except Exception as e:
             db.session.rollback()
             return False, f'Error al actualizar usuario: {str(e)}'
+    
+    @staticmethod
+    def get_user_data(user_id):
+        """
+        Get user data by ID
+        
+        Args:
+            user_id (int): User ID
+            
+        Returns:
+            tuple: (user_dict, None) or (None, error_message)
+        """
+        user = User.query.get(user_id)
+        
+        if not user:
+            return None, 'Usuario no encontrado'
+        
+        return user.to_dict(), None
+    
+    @staticmethod
+    def update_user_data(user_id, data):
+        """
+        Update user data
+        
+        Args:
+            user_id (int): User ID
+            data (dict): Data to update
+            
+        Returns:
+            tuple: (user_dict, None) or (None, error_message)
+        """
+        user = User.query.get(user_id)
+        
+        if not user:
+            return None, 'Usuario no encontrado'
+        
+        try:
+            # Check for unique constraints if updating username or email
+            if 'username' in data and data['username'] != user.username:
+                existing = User.query.filter_by(username=data['username']).first()
+                if existing:
+                    return None, 'El nombre de usuario ya está en uso'
+                user.username = data['username']
+            
+            if 'email' in data and data['email'] != user.email:
+                existing = User.query.filter_by(email=data['email']).first()
+                if existing:
+                    return None, 'El correo electrónico ya está registrado'
+                user.email = data['email']
+            
+            # Update other fields
+            if 'nombre_completo' in data:
+                user.nombre_completo = data['nombre_completo']
+            
+            if 'numero_celular' in data:
+                user.numero_celular = data['numero_celular']
+            
+            db.session.commit()
+            
+            return user.to_dict(), None
+            
+        except IntegrityError:
+            db.session.rollback()
+            return None, 'Error: datos duplicados'
+        except Exception as e:
+            db.session.rollback()
+            return None, f'Error al actualizar usuario: {str(e)}'
