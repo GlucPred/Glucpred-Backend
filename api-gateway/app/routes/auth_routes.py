@@ -110,6 +110,20 @@ def login():
               type: string
             user:
               type: object
+              properties:
+                id:
+                  type: integer
+                nombre_completo:
+                  type: string
+                username:
+                  type: string
+                email:
+                  type: string
+                rol:
+                  type: string
+                es_primer_inicio:
+                  type: boolean
+                  description: Indica si es el primer inicio de sesión del usuario
             access_token:
               type: string
       401:

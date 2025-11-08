@@ -85,7 +85,21 @@ class AuthService:
         if not user.check_password(password):
             return None, 'Credenciales inválidas'
         
+        # Check if it's the first login and update the flag
+        is_first_login = user.primer_inicio_sesion
+        if is_first_login:
+            try:
+                user.primer_inicio_sesion = False
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                # Continue even if update fails, it's not critical
+        
         # Generate token
         token = JWTHandler.generate_token(user)
         
-        return user.to_dict(), token
+        # Include first login info in response
+        user_dict = user.to_dict()
+        user_dict['es_primer_inicio'] = is_first_login
+        
+        return user_dict, token
