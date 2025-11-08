@@ -63,7 +63,12 @@ class EventConsumer:
                     for topic_partition, records in messages.items():
                         for record in records:
                             logger.info(f"Processing message from offset {record.offset}")
-                            cls._handle_event(record.value)
+                            # Process each message with app context
+                            if cls._app:
+                                with cls._app.app_context():
+                                    cls._handle_event(record.value)
+                            else:
+                                logger.error("Flask app not available")
                             
                 except Exception as e:
                     logger.error(f"Error consuming message: {e}", exc_info=True)
@@ -109,23 +114,18 @@ class EventConsumer:
         
         logger.info(f"Processing ProfileCreated event for user {user_id}")
         
-        # Use Flask app context for database operations
-        if not cls._app:
-            logger.error("Flask app not available, cannot process event")
-            return
+        # Import here to avoid circular imports
+        from app.services import AuthService
         
         try:
-            with cls._app.app_context():
-                from app.services import AuthService
-                
-                # Mark user as having completed profile setup
-                logger.info(f"Calling mark_profile_complete for user {user_id}")
-                success, error = AuthService.mark_profile_complete(user_id)
-                
-                if success:
-                    logger.info(f"✅ Successfully marked user {user_id} as profile complete")
-                else:
-                    logger.error(f"❌ Failed to mark user {user_id} as profile complete: {error}")
+            # Mark user as having completed profile setup
+            logger.info(f"Calling mark_profile_complete for user {user_id}")
+            success, error = AuthService.mark_profile_complete(user_id)
+            
+            if success:
+                logger.info(f"✅ Successfully marked user {user_id} as profile complete")
+            else:
+                logger.error(f"❌ Failed to mark user {user_id} as profile complete: {error}")
         except Exception as e:
             logger.error(f"Exception while handling ProfileCreated: {e}", exc_info=True)
     
