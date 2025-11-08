@@ -5,6 +5,7 @@ from app.routes import auth_routes
 from config.settings import Config
 import time
 import logging
+from app.events import EventConsumer
 
 logger = logging.getLogger(__name__)
 
@@ -38,5 +39,8 @@ def create_app():
                 else:
                     logger.error(f"Failed to connect to database after {max_retries} attempts")
                     raise
+    
+    # Start Kafka event consumer
+    EventConsumer.start()
     
     return app

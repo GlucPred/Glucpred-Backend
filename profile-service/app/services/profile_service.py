@@ -2,6 +2,7 @@ from app.models import Profile
 from app.extensions import db
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
+from app.events import EventProducer
 
 
 class ProfileService:
@@ -49,7 +50,15 @@ class ProfileService:
             db.session.add(new_profile)
             db.session.commit()
             
-            return new_profile.to_dict(), None
+            profile_dict = new_profile.to_dict()
+            
+            # Publish ProfileCreated event to Kafka
+            EventProducer.publish_profile_created(
+                user_id=data['user_id'],
+                profile_data=profile_dict
+            )
+            
+            return profile_dict, None
             
         except IntegrityError:
             db.session.rollback()
