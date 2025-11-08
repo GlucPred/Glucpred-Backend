@@ -102,7 +102,7 @@ services:
   
   # Authentication Service
   authentication-service:
-    image: authentication-service:latest
+    image: atahualpa365/authentication-service:latest
     container_name: glucpred-auth-service
     restart: always
     ports:
@@ -135,7 +135,7 @@ services:
 
   # Profile Service
   profile-service:
-    image: profile-service:latest
+    image: atahualpa365/profile-service:latest
     container_name: glucpred-profile-service
     restart: always
     ports:
@@ -171,7 +171,7 @@ services:
   # ==========================================
   
   api-gateway:
-    image: api-gateway:latest
+    image: atahualpa365/api-gateway:latest
     container_name: glucpred-api-gateway
     restart: always
     ports:

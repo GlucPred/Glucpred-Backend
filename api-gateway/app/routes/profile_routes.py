@@ -136,30 +136,35 @@ def get_profile(headers):
         
         # Call both services
         # 1. Get user data from auth-service
-        user_response = ServiceProxy.forward_request(
+        user_data, user_status = ServiceProxy.forward_request(
             Config.AUTH_SERVICE_URL,
             f'/api/auth/internal/user/{user_id}',
             method='GET'
         )
         
+        if user_status != 200:
+            return jsonify(user_data), user_status
+        
         # 2. Get profile data from profile-service
-        profile_response = ServiceProxy.forward_request(
+        profile_data, profile_status = ServiceProxy.forward_request(
             Config.PROFILE_SERVICE_URL,
             '/api/profile',
             method='GET',
             headers=headers
         )
         
+        # If profile doesn't exist, return user data with empty profile
+        if profile_status == 404:
+            return jsonify({
+                'user': user_data.get('user', {}),
+                'profile': None,
+                'message': 'Usuario sin perfil médico creado'
+            }), 200
+        
+        if profile_status != 200:
+            return jsonify(profile_data), profile_status
+        
         # Combine responses
-        user_data = user_response.get_json() if hasattr(user_response, 'get_json') else user_response
-        profile_data = profile_response.get_json() if hasattr(profile_response, 'get_json') else profile_response
-        
-        # Handle errors
-        if isinstance(user_data, tuple):
-            return user_data
-        if isinstance(profile_data, tuple):
-            return profile_data
-        
         return jsonify({
             'user': user_data.get('user', {}),
             'profile': profile_data.get('profile', {})
@@ -263,38 +268,30 @@ def update_profile(headers):
         
         # Update user data if provided
         if user_data:
-            user_response = ServiceProxy.forward_request(
+            user_result, user_status = ServiceProxy.forward_request(
                 Config.AUTH_SERVICE_URL,
                 f'/api/auth/internal/user/{user_id}',
                 method='PUT',
                 data=user_data
             )
-            user_result = user_response.get_json() if hasattr(user_response, 'get_json') else user_response
             
-            # Check for errors
-            if isinstance(user_result, tuple):
-                return user_result
-            if 'error' in user_result:
-                return jsonify(user_result), 400
+            if user_status != 200:
+                return jsonify(user_result), user_status
             
             responses['user'] = user_result.get('user', {})
         
         # Update profile data if provided
         if profile_data:
-            profile_response = ServiceProxy.forward_request(
+            profile_result, profile_status = ServiceProxy.forward_request(
                 Config.PROFILE_SERVICE_URL,
                 '/api/profile',
                 method='PUT',
                 data=profile_data,
                 headers=headers
             )
-            profile_result = profile_response.get_json() if hasattr(profile_response, 'get_json') else profile_response
             
-            # Check for errors
-            if isinstance(profile_result, tuple):
-                return profile_result
-            if 'error' in profile_result:
-                return jsonify(profile_result), 400
+            if profile_status != 200:
+                return jsonify(profile_result), profile_status
             
             responses['profile'] = profile_result.get('profile', {})
         
