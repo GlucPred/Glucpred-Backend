@@ -120,6 +120,54 @@ services:
       start_period: 40s
     command: --default-authentication-plugin=mysql_native_password
 
+  # MySQL Database for Doctor-Patient Service
+  doctor-patient-db:
+    image: mysql:8.0
+    container_name: glucpred-doctor-patient-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: glucpred_root_2024
+      MYSQL_DATABASE: doctor_patient_db
+      MYSQL_USER: doctor_patient_user
+      MYSQL_PASSWORD: doctor_patient_pass_2024
+    ports:
+      - "3310:3306"
+    volumes:
+      - doctor_patient_db_data:/var/lib/mysql
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pglucpred_root_2024"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    command: --default-authentication-plugin=mysql_native_password
+
+  # MySQL Database for Records Service
+  records-db:
+    image: mysql:8.0
+    container_name: glucpred-records-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: glucpred_root_2024
+      MYSQL_DATABASE: records_db
+      MYSQL_USER: records_user
+      MYSQL_PASSWORD: records_pass_2024
+    ports:
+      - "3311:3306"
+    volumes:
+      - records_db_data:/var/lib/mysql
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pglucpred_root_2024"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    command: --default-authentication-plugin=mysql_native_password
+
   # ==========================================
   # MICROSERVICIOS
   # ==========================================
@@ -212,6 +260,65 @@ services:
       retries: 3
       start_period: 60s
 
+  # Doctor-Patient Relationship Service
+  doctor-patient-service:
+    image: doctor-patient-service:latest
+    container_name: glucpred-doctor-patient-service
+    restart: always
+    ports:
+      - "8084:8084"
+    environment:
+      # Database Configuration
+      DB_USER: doctor_patient_user
+      DB_PASSWORD: doctor_patient_pass_2024
+      DB_HOST: doctor-patient-db
+      DB_PORT: "3306"
+      DB_NAME: doctor_patient_db
+      # JWT Configuration
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+      # Service URLs
+      PROFILE_SERVICE_URL: http://profile-service:8082
+      DOCTOR_PROFILE_SERVICE_URL: http://doctor-profile-service:8083
+    depends_on:
+      doctor-patient-db:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/api/doctor-patient/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Records Service
+  records-service:
+    image: records-service:latest
+    container_name: glucpred-records-service
+    restart: always
+    ports:
+      - "8085:8085"
+    environment:
+      # Database Configuration
+      DB_USER: records_user
+      DB_PASSWORD: records_pass_2024
+      DB_HOST: records-db
+      DB_PORT: "3306"
+      DB_NAME: records_db
+      # JWT Configuration
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+    depends_on:
+      records-db:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/api/records/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # ==========================================
   # API GATEWAY (con Swagger)
   # ==========================================
@@ -227,6 +334,8 @@ services:
       AUTH_SERVICE_URL: http://authentication-service:8081
       PROFILE_SERVICE_URL: http://profile-service:8082
       DOCTOR_PROFILE_SERVICE_URL: http://doctor-profile-service:8083
+      DOCTOR_PATIENT_SERVICE_URL: http://doctor-patient-service:8084
+      RECORDS_SERVICE_URL: http://records-service:8085
       # JWT Configuration
       JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
     depends_on:
@@ -235,6 +344,10 @@ services:
       profile-service:
         condition: service_healthy
       doctor-profile-service:
+        condition: service_healthy
+      doctor-patient-service:
+        condition: service_healthy
+      records-service:
         condition: service_healthy
     networks:
       - glucpred-network
@@ -261,3 +374,7 @@ volumes:
     name: glucpred_profile_db_data
   doctor_profile_db_data:
     name: glucpred_doctor_profile_db_data
+  doctor_patient_db_data:
+    name: glucpred_doctor_patient_db_data
+  records_db_data:
+    name: glucpred_records_db_data

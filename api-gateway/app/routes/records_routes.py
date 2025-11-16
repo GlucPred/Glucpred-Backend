@@ -1,0 +1,353 @@
+from flask import Blueprint, request
+from flasgger import swag_from
+from app.utils.service_proxy import ServiceProxy
+from config.settings import Config
+
+bp = Blueprint('records', __name__, url_prefix='/api/records')
+
+
+@bp.route('/', methods=['POST'])
+def create_record():
+    """Registrar nueva medición de glucosa desde CGM
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - glucose_value
+          properties:
+            glucose_value:
+              type: number
+              example: 105.5
+              description: Valor de glucosa en mg/dL desde el CGM
+            measurement_time:
+              type: string
+              format: date-time
+              example: "2025-11-16T14:30:00Z"
+              description: Fecha y hora de la medición del CGM (opcional, por defecto ahora)
+    responses:
+      201:
+        description: Registro creado exitosamente
+      400:
+        description: Error en los datos
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        '/api/records/',
+        method='POST',
+        json=request.get_json(),
+        headers=request.headers
+    )
+
+
+@bp.route('/latest', methods=['GET'])
+def get_latest():
+    """Obtener última medición de glucosa del usuario autenticado
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Última medición de glucosa
+      404:
+        description: No se encontraron registros
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        '/api/records/latest',
+        method='GET',
+        headers=request.headers
+    )
+
+
+@bp.route('/user/<int:user_id>/latest', methods=['GET'])
+def get_latest_for_user(user_id):
+    """Obtener última medición de un paciente específico
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: ID del usuario/paciente
+    responses:
+      200:
+        description: Última medición de glucosa
+      404:
+        description: No se encontraron registros
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        f'/api/records/user/{user_id}/latest',
+        method='GET',
+        headers=request.headers
+    )
+
+
+@bp.route('/trend', methods=['GET'])
+def get_trend():
+    """Obtener tendencia de glucosa del usuario autenticado
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    parameters:
+      - in: query
+        name: hours
+        type: integer
+        default: 12
+        description: Número de horas hacia atrás (1-720)
+    responses:
+      200:
+        description: Lista de mediciones en el período
+        schema:
+          type: object
+          properties:
+            user_id:
+              type: integer
+            period_hours:
+              type: integer
+            records:
+              type: array
+              items:
+                type: object
+            total:
+              type: integer
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        '/api/records/trend',
+        method='GET',
+        params=request.args,
+        headers=request.headers
+    )
+
+
+@bp.route('/user/<int:user_id>/trend', methods=['GET'])
+def get_trend_for_user(user_id):
+    """Obtener tendencia de glucosa de un paciente específico
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+        description: ID del usuario/paciente
+      - in: query
+        name: hours
+        type: integer
+        default: 12
+        description: Número de horas hacia atrás (1-720)
+    responses:
+      200:
+        description: Lista de mediciones en el período
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        f'/api/records/user/{user_id}/trend',
+        method='GET',
+        params=request.args,
+        headers=request.headers
+    )
+
+
+@bp.route('/history', methods=['GET'])
+def get_history():
+    """Obtener historial paginado de mediciones del usuario autenticado
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    parameters:
+      - in: query
+        name: limit
+        type: integer
+        default: 100
+        description: Registros por página (máx 500)
+      - in: query
+        name: offset
+        type: integer
+        default: 0
+        description: Desplazamiento para paginación
+      - in: query
+        name: start_date
+        type: string
+        format: date-time
+        description: Fecha inicial (ISO 8601)
+      - in: query
+        name: end_date
+        type: string
+        format: date-time
+        description: Fecha final (ISO 8601)
+    responses:
+      200:
+        description: Historial paginado
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        '/api/records/history',
+        method='GET',
+        params=request.args,
+        headers=request.headers
+    )
+
+
+@bp.route('/user/<int:user_id>/history', methods=['GET'])
+def get_history_for_user(user_id):
+    """Obtener historial paginado de un paciente específico
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+      - in: query
+        name: limit
+        type: integer
+        default: 100
+      - in: query
+        name: offset
+        type: integer
+        default: 0
+      - in: query
+        name: start_date
+        type: string
+        format: date-time
+      - in: query
+        name: end_date
+        type: string
+        format: date-time
+    responses:
+      200:
+        description: Historial paginado
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        f'/api/records/user/{user_id}/history',
+        method='GET',
+        params=request.args,
+        headers=request.headers
+    )
+
+
+@bp.route('/statistics', methods=['GET'])
+def get_statistics():
+    """Obtener estadísticas de glucosa del usuario autenticado
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    parameters:
+      - in: query
+        name: hours
+        type: integer
+        default: 24
+        description: Período en horas (1-720)
+    responses:
+      200:
+        description: Estadísticas calculadas
+        schema:
+          type: object
+          properties:
+            period_hours:
+              type: integer
+            total_readings:
+              type: integer
+            average:
+              type: number
+            min:
+              type: number
+            max:
+              type: number
+            classifications:
+              type: object
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        '/api/records/statistics',
+        method='GET',
+        params=request.args,
+        headers=request.headers
+    )
+
+
+@bp.route('/user/<int:user_id>/statistics', methods=['GET'])
+def get_statistics_for_user(user_id):
+    """Obtener estadísticas de glucosa de un paciente específico
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+      - in: query
+        name: hours
+        type: integer
+        default: 24
+    responses:
+      200:
+        description: Estadísticas calculadas
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        f'/api/records/user/{user_id}/statistics',
+        method='GET',
+        params=request.args,
+        headers=request.headers
+    )
+
+
+@bp.route('/<int:record_id>', methods=['DELETE'])
+def delete_record(record_id):
+    """Eliminar un registro de glucosa propio
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: record_id
+        type: integer
+        required: true
+        description: ID del registro a eliminar
+    responses:
+      200:
+        description: Registro eliminado exitosamente
+      404:
+        description: Registro no encontrado
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        f'/api/records/{record_id}',
+        method='DELETE',
+        headers=request.headers
+    )
