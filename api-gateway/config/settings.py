@@ -7,6 +7,10 @@ class Config:
     # Service URLs
     AUTH_SERVICE_URL = os.getenv('AUTH_SERVICE_URL', 'http://authentication-service:8081')
     PROFILE_SERVICE_URL = os.getenv('PROFILE_SERVICE_URL', 'http://profile-service:8082')
+    DOCTOR_PROFILE_SERVICE_URL = os.getenv('DOCTOR_PROFILE_SERVICE_URL', 'http://doctor-profile-service:8083')
+    
+    # JWT Configuration
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-here')
     
     # Request configuration
     REQUEST_TIMEOUT = int(os.getenv('REQUEST_TIMEOUT', 30))

@@ -94,6 +94,8 @@ class EventConsumer:
         
         if event_type == 'ProfileCreated':
             cls._handle_profile_created(event)
+        elif event_type == 'DoctorProfileCreated':
+            cls._handle_profile_created(event)  # Same logic for doctor profiles
         else:
             logger.warning(f"Unknown event type: {event_type}")
     

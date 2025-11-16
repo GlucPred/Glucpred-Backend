@@ -1,25 +1,22 @@
 from flask import Blueprint, request, jsonify
-from app.services import ProfileService
+from app.services import DoctorProfileService
 from app.middleware import JWTAuthMiddleware
 
 
-bp = Blueprint('patient_profile', __name__, url_prefix='/api/profile/paciente')
+bp = Blueprint('doctor_profile', __name__, url_prefix='/api/profile/medico')
 token_required = JWTAuthMiddleware.token_required
 
 
 @bp.route('', methods=['POST'])
 @token_required
-def create_profile():
+def create_doctor_profile():
     """
-    Create a new profile
+    Create a new doctor profile
     Expected JSON:
     {
-        "edad": int (optional),
-        "peso": float (optional),
-        "altura": float (optional),
-        "medicamentos": string (optional),
-        "antecedentes": string (optional),
-        "fecha_diagnostico": string "YYYY-MM-DD" (optional)
+        "numero_colegiatura": string (required),
+        "especialidad": string (required),
+        "centro_trabajo": string (required)
     }
     """
     try:
@@ -30,14 +27,14 @@ def create_profile():
         # Add user_id from token to data
         data['user_id'] = user_id
         
-        profile_dict, error = ProfileService.create_profile(data)
+        profile_dict, error = DoctorProfileService.create_doctor_profile(data)
         
         if profile_dict is None:
-            status_code = 400 if 'requerido' in error or 'inválido' in error else 409
+            status_code = 400 if 'requerido' in error or 'requerida' in error else 409
             return jsonify({'error': error}), status_code
         
         return jsonify({
-            'message': 'Perfil creado exitosamente',
+            'message': 'Perfil de médico creado exitosamente',
             'profile': profile_dict
         }), 201
         
@@ -49,13 +46,12 @@ def create_profile():
 
 @bp.route('', methods=['GET'])
 @token_required
-def get_profile():
-    """Get profile of authenticated user"""
+def get_doctor_profile():
+    """Get doctor profile for authenticated user"""
     try:
-        # Get user_id from JWT token (set by middleware)
         user_id = request.current_user.get('user_id')
         
-        profile_dict, error = ProfileService.get_profile(user_id)
+        profile_dict, error = DoctorProfileService.get_doctor_profile(user_id)
         
         if profile_dict is None:
             return jsonify({'error': error}), 404
@@ -70,32 +66,27 @@ def get_profile():
 
 @bp.route('', methods=['PUT'])
 @token_required
-def update_profile():
+def update_doctor_profile():
     """
-    Update profile of authenticated user
-    Expected JSON (all fields optional):
+    Update doctor profile
+    Expected JSON (all optional):
     {
-        "edad": int,
-        "peso": float,
-        "altura": float,
-        "medicamentos": string,
-        "antecedentes": string,
-        "fecha_diagnostico": string "YYYY-MM-DD"
+        "numero_colegiatura": string,
+        "especialidad": string,
+        "centro_trabajo": string
     }
     """
     try:
-        # Get user_id from JWT token (set by middleware)
         user_id = request.current_user.get('user_id')
-        
         data = request.get_json()
-        profile_dict, error = ProfileService.update_profile(user_id, data)
+        
+        profile_dict, error = DoctorProfileService.update_doctor_profile(user_id, data)
         
         if profile_dict is None:
-            status_code = 400 if 'inválido' in error else 404
-            return jsonify({'error': error}), status_code
+            return jsonify({'error': error}), 404
         
         return jsonify({
-            'message': 'Perfil actualizado exitosamente',
+            'message': 'Perfil de médico actualizado exitosamente',
             'profile': profile_dict
         }), 200
         
@@ -106,9 +97,6 @@ def update_profile():
 
 
 @bp.route('/health', methods=['GET'])
-def health():
+def health_check():
     """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'service': 'profile-service'
-    }), 200
+    return jsonify({'status': 'healthy', 'service': 'doctor-profile-service'}), 200
