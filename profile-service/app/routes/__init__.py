@@ -1,3 +1,3 @@
-from .profile_routes import bp
+from . import profile_routes
 
-__all__ = ['bp']
+__all__ = ['profile_routes']

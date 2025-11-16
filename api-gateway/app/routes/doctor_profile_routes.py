@@ -4,14 +4,14 @@ from app.middleware import extract_auth_header
 from config.settings import Config
 import jwt
 
-bp = Blueprint('patient_profile', __name__, url_prefix='/api/profile/paciente')
+bp = Blueprint('doctor_profile', __name__, url_prefix='/api/profile/medico')
 
 
 @bp.route('', methods=['POST'])
 @extract_auth_header
-def create_profile(headers):
+def create_doctor_profile(headers):
     """
-    Crear perfil de paciente
+    Crear perfil de médico
     ---
     tags:
       - Profile
@@ -20,37 +20,27 @@ def create_profile(headers):
     parameters:
       - in: body
         name: body
-        description: Datos del perfil del paciente
+        description: Datos del perfil del médico
         required: true
         schema:
           type: object
+          required:
+            - numero_colegiatura
+            - especialidad
+            - centro_trabajo
           properties:
-            edad:
-              type: integer
-              example: 45
-            peso:
-              type: number
-              format: float
-              example: 75.5
-              description: Peso en kilogramos
-            altura:
-              type: number
-              format: float
-              example: 170
-              description: Altura en centímetros
-            medicamentos:
+            numero_colegiatura:
               type: string
-              example: "Metformina 500mg 2 veces al día"
-            antecedentes:
+              example: "CMP-12345"
+            especialidad:
               type: string
-              example: "Diabetes tipo 2, hipertensión"
-            fecha_diagnostico:
+              example: "Endocrinología"
+            centro_trabajo:
               type: string
-              format: date
-              example: "2020-05-15"
+              example: "Hospital Nacional"
     responses:
       201:
-        description: Perfil creado exitosamente
+        description: Perfil de médico creado exitosamente
         schema:
           type: object
           properties:
@@ -67,8 +57,8 @@ def create_profile(headers):
     """
     data = request.get_json()
     return ServiceProxy.forward_request(
-        Config.PROFILE_SERVICE_URL,
-        '/api/profile/paciente',
+        Config.DOCTOR_PROFILE_SERVICE_URL,
+        '/api/profile/medico',
         method='POST',
         data=data,
         headers=headers
@@ -77,9 +67,9 @@ def create_profile(headers):
 
 @bp.route('', methods=['GET'])
 @extract_auth_header
-def get_profile(headers):
+def get_doctor_profile(headers):
     """
-    Obtener perfil completo de paciente autenticado (datos de usuario + perfil médico)
+    Obtener perfil completo de médico autenticado (datos de usuario + perfil médico)
     ---
     tags:
       - Profile
@@ -105,19 +95,11 @@ def get_profile(headers):
             profile:
               type: object
               properties:
-                edad:
-                  type: integer
-                peso:
-                  type: number
-                altura:
-                  type: number
-                imc:
-                  type: number
-                medicamentos:
+                numero_colegiatura:
                   type: string
-                antecedentes:
+                especialidad:
                   type: string
-                fecha_diagnostico:
+                centro_trabajo:
                   type: string
       401:
         description: Token inválido o no proporcionado
@@ -145,10 +127,10 @@ def get_profile(headers):
         if user_status != 200:
             return jsonify(user_data), user_status
         
-        # 2. Get profile data from profile-service
+        # 2. Get doctor profile data from doctor-profile-service
         profile_data, profile_status = ServiceProxy.forward_request(
-            Config.PROFILE_SERVICE_URL,
-            '/api/profile/paciente',
+            Config.DOCTOR_PROFILE_SERVICE_URL,
+            '/api/profile/medico',
             method='GET',
             headers=headers
         )
@@ -158,7 +140,7 @@ def get_profile(headers):
             return jsonify({
                 'user': user_data.get('user', {}),
                 'profile': None,
-                'message': 'Usuario sin perfil médico creado'
+                'message': 'Usuario sin perfil de médico creado'
             }), 200
         
         if profile_status != 200:
@@ -174,12 +156,11 @@ def get_profile(headers):
         return jsonify({'error': f'Error al obtener perfil: {str(e)}'}), 500
 
 
-
 @bp.route('', methods=['PUT'])
 @extract_auth_header
-def update_profile(headers):
+def update_doctor_profile(headers):
     """
-    Actualizar perfil completo de paciente autenticado (datos de usuario + perfil médico)
+    Actualizar perfil completo de médico autenticado (datos de usuario + perfil médico)
     ---
     tags:
       - Profile
@@ -195,38 +176,26 @@ def update_profile(headers):
             # Datos de usuario (auth-service)
             nombre_completo:
               type: string
-              example: "Juan Pérez García"
+              example: "Dr. Juan Pérez García"
             email:
               type: string
-              example: "juan.perez@example.com"
+              example: "dr.perez@example.com"
             username:
               type: string
-              example: "juanperez2024"
+              example: "drperez2024"
             numero_celular:
               type: string
               example: "987654321"
             # Datos de perfil médico (profile-service)
-            edad:
-              type: integer
-              example: 46
-            peso:
-              type: number
-              format: float
-              example: 73.0
-            altura:
-              type: number
-              format: float
-              example: 172
-            medicamentos:
+            numero_colegiatura:
               type: string
-              example: "Metformina 500mg 3 veces al día"
-            antecedentes:
+              example: "CMP-12345"
+            especialidad:
               type: string
-              example: "Diabetes tipo 2, hipertensión, colesterol alto"
-            fecha_diagnostico:
+              example: "Endocrinología"
+            centro_trabajo:
               type: string
-              format: date
-              example: "2020-05-15"
+              example: "Hospital Nacional"
     responses:
       200:
         description: Perfil actualizado exitosamente
@@ -259,7 +228,7 @@ def update_profile(headers):
         
         # Separate user data from profile data
         user_fields = ['nombre_completo', 'email', 'username', 'numero_celular']
-        profile_fields = ['edad', 'peso', 'altura', 'medicamentos', 'antecedentes', 'fecha_diagnostico']
+        profile_fields = ['numero_colegiatura', 'especialidad', 'centro_trabajo']
         
         user_data = {k: v for k, v in data.items() if k in user_fields}
         profile_data = {k: v for k, v in data.items() if k in profile_fields}
@@ -283,8 +252,8 @@ def update_profile(headers):
         # Update profile data if provided
         if profile_data:
             profile_result, profile_status = ServiceProxy.forward_request(
-                Config.PROFILE_SERVICE_URL,
-                '/api/profile/paciente',
+                Config.DOCTOR_PROFILE_SERVICE_URL,
+                '/api/profile/medico',
                 method='PUT',
                 data=profile_data,
                 headers=headers
@@ -296,7 +265,7 @@ def update_profile(headers):
             responses['profile'] = profile_result.get('profile', {})
         
         return jsonify({
-            'message': 'Perfil actualizado exitosamente',
+            'message': 'Perfil de médico actualizado exitosamente',
             **responses
         }), 200
         
