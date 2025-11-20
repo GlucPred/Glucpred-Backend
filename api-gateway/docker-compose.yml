@@ -168,6 +168,30 @@ services:
       start_period: 40s
     command: --default-authentication-plugin=mysql_native_password
 
+  # MySQL Database for Alerts Service
+  alerts-db:
+    image: mysql:8.0
+    container_name: glucpred-alerts-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: glucpred_root_2024
+      MYSQL_DATABASE: alerts_db
+      MYSQL_USER: alerts_user
+      MYSQL_PASSWORD: alerts_pass_2024
+    ports:
+      - "3312:3306"
+    volumes:
+      - alerts_db_data:/var/lib/mysql
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pglucpred_root_2024"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    command: --default-authentication-plugin=mysql_native_password
+
   # ==========================================
   # MICROSERVICIOS
   # ==========================================
@@ -307,8 +331,12 @@ services:
       DB_NAME: records_db
       # JWT Configuration
       JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
       records-db:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - glucpred-network
@@ -318,6 +346,60 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  # Alerts Service
+  alerts-service:
+    image: alerts-service:latest
+    container_name: glucpred-alerts-service
+    restart: always
+    ports:
+      - "8086:8086"
+    environment:
+      # Database Configuration
+      DB_USER: alerts_user
+      DB_PASSWORD: alerts_pass_2024
+      DB_HOST: alerts-db
+      DB_PORT: "3306"
+      DB_NAME: alerts_db
+      # JWT Configuration
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      PORT: 8086
+    depends_on:
+      alerts-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  analysis-service:
+    image: analysis-service:latest
+    container_name: glucpred-analysis-service
+    restart: always
+    ports:
+      - "5001:5000"
+    environment:
+      # Kafka Configuration
+      KAFKA_BROKER: kafka:29092
+      EVENT_TOPIC: event-bus
+      # JWT Configuration
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/analysis/predict"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # ==========================================
   # API GATEWAY (con Swagger)
@@ -336,6 +418,7 @@ services:
       DOCTOR_PROFILE_SERVICE_URL: http://doctor-profile-service:8083
       DOCTOR_PATIENT_SERVICE_URL: http://doctor-patient-service:8084
       RECORDS_SERVICE_URL: http://records-service:8085
+      ANALYSIS_SERVICE_URL: http://analysis-service:5000
       # JWT Configuration
       JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
     depends_on:
@@ -348,6 +431,8 @@ services:
       doctor-patient-service:
         condition: service_healthy
       records-service:
+        condition: service_healthy
+      alerts-service:
         condition: service_healthy
     networks:
       - glucpred-network
@@ -378,3 +463,5 @@ volumes:
     name: glucpred_doctor_patient_db_data
   records_db_data:
     name: glucpred_records_db_data
+  alerts_db_data:
+    name: glucpred_alerts_db_data

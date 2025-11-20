@@ -1,5 +1,6 @@
 from app.models import GlucoseRecord
 from app.extensions import db
+from app.events.kafka_producer import GlucoseEventProducer
 from datetime import datetime, timedelta
 from config.settings import Config
 import logging
@@ -72,6 +73,21 @@ class RecordsService:
             db.session.commit()
             
             logger.info(f"Created glucose record for user {user_id}: {glucose_value} mg/dL ({classification})")
+            
+            # Publish Kafka event for alerts-service
+            try:
+                producer = GlucoseEventProducer()
+                producer.publish_glucose_recorded(
+                    user_id=user_id,
+                    record_id=record.id,
+                    glucose_value=glucose_value,
+                    classification=classification,
+                    measurement_time=measurement_time
+                )
+            except Exception as e:
+                logger.error(f"Failed to publish glucose event to Kafka: {e}")
+                # No fallar la creación del registro si Kafka falla
+            
             return record.to_dict(), None
             
         except Exception as e:
