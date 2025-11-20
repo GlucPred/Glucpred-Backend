@@ -23,3 +23,7 @@ class Config:
     GLUCOSE_NORMAL_MIN = 70
     GLUCOSE_NORMAL_MAX = 140
     GLUCOSE_HIGH_THRESHOLD = 140
+    
+    # Kafka Configuration
+    KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+    KAFKA_TOPIC_GLUCOSE_RECORDED = 'glucose.recorded'
