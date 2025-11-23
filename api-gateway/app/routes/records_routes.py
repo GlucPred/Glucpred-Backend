@@ -41,9 +41,7 @@ def create_record():
     return ServiceProxy.forward_request(
         Config.RECORDS_SERVICE_URL,
         '/api/records/',
-        method='POST',
-        json=request.get_json(),
-        headers=request.headers
+        flask_request=request
     )
 
 
@@ -64,8 +62,7 @@ def get_latest():
     return ServiceProxy.forward_request(
         Config.RECORDS_SERVICE_URL,
         '/api/records/latest',
-        method='GET',
-        headers=request.headers
+        flask_request=request
     )
 
 
@@ -92,8 +89,7 @@ def get_latest_for_user(user_id):
     return ServiceProxy.forward_request(
         Config.RECORDS_SERVICE_URL,
         f'/api/records/user/{user_id}/latest',
-        method='GET',
-        headers=request.headers
+        flask_request=request
     )
 
 
@@ -131,9 +127,7 @@ def get_trend():
     return ServiceProxy.forward_request(
         Config.RECORDS_SERVICE_URL,
         '/api/records/trend',
-        method='GET',
-        params=request.args,
-        headers=request.headers
+        flask_request=request
     )
 
 
@@ -163,9 +157,7 @@ def get_trend_for_user(user_id):
     return ServiceProxy.forward_request(
         Config.RECORDS_SERVICE_URL,
         f'/api/records/user/{user_id}/trend',
-        method='GET',
-        params=request.args,
-        headers=request.headers
+        flask_request=request
     )
 
 
@@ -205,9 +197,7 @@ def get_history():
     return ServiceProxy.forward_request(
         Config.RECORDS_SERVICE_URL,
         '/api/records/history',
-        method='GET',
-        params=request.args,
-        headers=request.headers
+        flask_request=request
     )
 
 
@@ -247,9 +237,47 @@ def get_history_for_user(user_id):
     return ServiceProxy.forward_request(
         Config.RECORDS_SERVICE_URL,
         f'/api/records/user/{user_id}/history',
-        method='GET',
-        params=request.args,
-        headers=request.headers
+        flask_request=request
+    )
+
+
+@bp.route('/my-patients', methods=['GET'])
+def get_all_my_patients_records():
+    """Obtener registros de todos los pacientes asignados (solo médicos)
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    parameters:
+      - name: limit
+        in: query
+        type: integer
+        description: Número de registros a devolver
+        default: 100
+      - name: offset
+        in: query
+        type: integer
+        description: Desplazamiento para paginación
+        default: 0
+      - name: start_date
+        in: query
+        type: string
+        description: Fecha de inicio (YYYY-MM-DD)
+      - name: end_date
+        in: query
+        type: string
+        description: Fecha de fin (YYYY-MM-DD)
+    responses:
+      200:
+        description: Lista de registros de todos los pacientes asignados
+      403:
+        description: Acceso denegado
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        '/api/records/my-patients',
+        flask_request=request
     )
 
 
@@ -289,9 +317,7 @@ def get_statistics():
     return ServiceProxy.forward_request(
         Config.RECORDS_SERVICE_URL,
         '/api/records/statistics',
-        method='GET',
-        params=request.args,
-        headers=request.headers
+        flask_request=request
     )
 
 
@@ -319,9 +345,7 @@ def get_statistics_for_user(user_id):
     return ServiceProxy.forward_request(
         Config.RECORDS_SERVICE_URL,
         f'/api/records/user/{user_id}/statistics',
-        method='GET',
-        params=request.args,
-        headers=request.headers
+        flask_request=request
     )
 
 
@@ -348,6 +372,5 @@ def delete_record(record_id):
     return ServiceProxy.forward_request(
         Config.RECORDS_SERVICE_URL,
         f'/api/records/{record_id}',
-        method='DELETE',
-        headers=request.headers
+        flask_request=request
     )

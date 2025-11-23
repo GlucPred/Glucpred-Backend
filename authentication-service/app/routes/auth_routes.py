@@ -152,3 +152,26 @@ def update_user_data(user_id):
         return jsonify({
             'error': f'Error interno del servidor: {str(e)}'
         }), 500
+
+
+@bp.route('/users', methods=['GET'])
+def get_all_users():
+    """
+    Get all users (for internal microservice use)
+    Returns basic user information including rol
+    """
+    try:
+        users, error = AuthService.get_all_users()
+        
+        if error:
+            return jsonify({'error': error}), 500
+        
+        return jsonify({
+            'users': users,
+            'total': len(users)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error interno del servidor: {str(e)}'
+        }), 500
