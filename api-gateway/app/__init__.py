@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-from app.routes import auth_routes, profile_routes, health_routes
+from app.routes import auth_routes, profile_routes, doctor_profile_routes, doctor_patient_routes, records_routes, alerts_routes, health_routes, analysis_routes
 from app.swagger_config import init_swagger
 from config.settings import Config
 
@@ -19,6 +19,11 @@ def create_app():
     # Register blueprints
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(profile_routes.bp)
+    app.register_blueprint(doctor_profile_routes.bp)
+    app.register_blueprint(doctor_patient_routes.bp)
+    app.register_blueprint(records_routes.bp)
+    app.register_blueprint(alerts_routes.bp)
+    app.register_blueprint(analysis_routes.bp)
     app.register_blueprint(health_routes.bp)
     
     return app

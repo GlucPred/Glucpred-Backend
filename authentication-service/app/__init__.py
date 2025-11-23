@@ -5,6 +5,8 @@ from app.routes import auth_routes
 from config.settings import Config
 import time
 import logging
+import os
+from app.events import EventConsumer
 
 logger = logging.getLogger(__name__)
 
@@ -38,5 +40,17 @@ def create_app():
                 else:
                     logger.error(f"Failed to connect to database after {max_retries} attempts")
                     raise
+    
+    # Start Kafka event consumer (pass app context)
+    # Only start in the main process, not in the reloader process
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        logger.info("Starting Kafka event consumer...")
+        try:
+            EventConsumer.start(app)
+            logger.info("Kafka event consumer started successfully")
+        except Exception as e:
+            logger.error(f"Failed to start Kafka event consumer: {e}", exc_info=True)
+    else:
+        logger.info("Skipping Kafka consumer start in reloader process")
     
     return app
