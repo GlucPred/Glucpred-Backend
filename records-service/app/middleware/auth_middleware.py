@@ -28,7 +28,7 @@ def token_required(f):
         try:
             data = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
             current_user_id = data.get('user_id')
-            user_role = data.get('role')
+            user_role = data.get('rol')
             
             if not current_user_id:
                 return jsonify({'error': 'Token inválido'}), 401

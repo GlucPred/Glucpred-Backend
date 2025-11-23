@@ -188,6 +188,90 @@ def get_history_for_user(current_user_id, user_role, user_id):
     return jsonify(result), 200
 
 
+@bp.route('/my-patients', methods=['GET'])
+@token_required
+def get_all_my_patients_records(current_user_id, user_role):
+    """
+    Get records from all assigned patients (for doctors only)
+    
+    Query params:
+    - limit: número de registros (default: 100)
+    - offset: desplazamiento (default: 0)
+    - start_date: fecha inicio (opcional)
+    - end_date: fecha fin (opcional)
+    """
+    import requests
+    from config.settings import Config
+    
+    if user_role != 'Medico':
+        return jsonify({'error': 'Acceso denegado. Solo médicos pueden usar este endpoint'}), 403
+    
+    # Obtener lista de pacientes asignados
+    try:
+        # Extraer el token del header
+        auth_header = request.headers.get('Authorization', '')
+        
+        response = requests.get(
+            f'http://doctor-patient-service:8084/api/doctor-patient/my-patients',
+            headers={'Authorization': auth_header}
+        )
+        
+        if response.status_code != 200:
+            return jsonify({'error': 'Error al obtener lista de pacientes'}), 500
+            
+        patients_data = response.json()
+        patient_ids = [p['patient_user_id'] for p in patients_data.get('patients', [])]
+        
+        if not patient_ids:
+            return jsonify({
+                'records': [],
+                'total': 0,
+                'limit': request.args.get('limit', 100, type=int),
+                'offset': request.args.get('offset', 0, type=int)
+            }), 200
+        
+    except Exception as e:
+        logger.error(f"Error al obtener pacientes asignados: {str(e)}")
+        return jsonify({'error': 'Error al conectar con el servicio de pacientes'}), 500
+    
+    # Obtener registros de todos los pacientes
+    limit = min(request.args.get('limit', 100, type=int), 500)
+    offset = request.args.get('offset', 0, type=int)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    all_records = []
+    
+    for patient_id in patient_ids:
+        result, error = RecordsService.get_records_history(
+            user_id=patient_id,
+            limit=limit,
+            offset=0,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        if not error and result.get('records'):
+            # Agregar patient_id a cada registro
+            for record in result['records']:
+                record['patient_id'] = patient_id
+            all_records.extend(result['records'])
+    
+    # Ordenar por fecha descendente
+    all_records.sort(key=lambda x: x.get('measurement_time', ''), reverse=True)
+    
+    # Aplicar paginación
+    total = len(all_records)
+    paginated_records = all_records[offset:offset + limit]
+    
+    return jsonify({
+        'records': paginated_records,
+        'total': total,
+        'limit': limit,
+        'offset': offset
+    }), 200
+
+
 @bp.route('/statistics', methods=['GET'])
 @token_required
 def get_statistics(current_user_id, user_role):

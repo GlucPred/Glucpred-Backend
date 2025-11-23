@@ -30,7 +30,7 @@ def token_required(f):
             # Decode token
             data = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
             current_user_id = data.get('user_id')
-            user_role = data.get('role')
+            user_role = data.get('rol')  # El token usa 'rol' no 'role'
             
             if not current_user_id:
                 return jsonify({'error': 'Token inválido'}), 401
@@ -65,12 +65,12 @@ def doctor_required(f):
         try:
             data = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
             current_user_id = data.get('user_id')
-            user_role = data.get('role')
+            user_role = data.get('rol')  # El token usa 'rol' no 'role'
             
             if not current_user_id:
                 return jsonify({'error': 'Token inválido'}), 401
             
-            if user_role != 'medico':
+            if user_role != 'Medico':  # El rol en la DB es 'Medico' con mayúscula
                 return jsonify({'error': 'Acceso denegado. Solo médicos pueden acceder a este recurso'}), 403
             
         except jwt.ExpiredSignatureError:
