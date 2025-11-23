@@ -78,3 +78,100 @@ def health():
         'status': 'healthy',
         'service': 'authentication-service'
     }), 200
+
+
+@bp.route('/internal/mark-profile-complete/<int:user_id>', methods=['POST'])
+def mark_profile_complete(user_id):
+    """
+    Internal endpoint to mark user as having completed initial profile setup
+    This should only be called by other microservices (profile-service)
+    """
+    try:
+        success, error = AuthService.mark_profile_complete(user_id)
+        
+        if not success:
+            return jsonify({'error': error}), 404
+        
+        return jsonify({
+            'message': 'Usuario marcado como configurado'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error interno del servidor: {str(e)}'
+        }), 500
+
+
+@bp.route('/internal/user/<int:user_id>', methods=['GET'])
+def get_user_data(user_id):
+    """
+    Internal endpoint to get user data
+    Used by API Gateway to combine with profile data
+    """
+    try:
+        user_dict, error = AuthService.get_user_data(user_id)
+        
+        if user_dict is None:
+            return jsonify({'error': error}), 404
+        
+        return jsonify({'user': user_dict}), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error interno del servidor: {str(e)}'
+        }), 500
+
+
+@bp.route('/internal/user/<int:user_id>', methods=['PUT'])
+def update_user_data(user_id):
+    """
+    Internal endpoint to update user data
+    Used by API Gateway when updating profile
+    Expected JSON (all optional):
+    {
+        "nombre_completo": "string",
+        "email": "string",
+        "username": "string",
+        "numero_celular": "string"
+    }
+    """
+    try:
+        data = request.get_json()
+        user_dict, error = AuthService.update_user_data(user_id, data)
+        
+        if user_dict is None:
+            status_code = 400 if 'uso' in error or 'registrado' in error else 404
+            return jsonify({'error': error}), status_code
+        
+        return jsonify({
+            'message': 'Datos de usuario actualizados',
+            'user': user_dict
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error interno del servidor: {str(e)}'
+        }), 500
+
+
+@bp.route('/users', methods=['GET'])
+def get_all_users():
+    """
+    Get all users (for internal microservice use)
+    Returns basic user information including rol
+    """
+    try:
+        users, error = AuthService.get_all_users()
+        
+        if error:
+            return jsonify({'error': error}), 500
+        
+        return jsonify({
+            'users': users,
+            'total': len(users)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error interno del servidor: {str(e)}'
+        }), 500

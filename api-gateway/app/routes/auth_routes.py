@@ -121,9 +121,9 @@ def login():
                   type: string
                 rol:
                   type: string
-                es_primer_inicio:
+                primer_inicio_sesion:
                   type: boolean
-                  description: Indica si es el primer inicio de sesión del usuario
+                  description: Indica si el usuario aún no ha configurado su perfil
             access_token:
               type: string
       401:

@@ -20,6 +20,7 @@ def create_app():
     
     # Register blueprints
     app.register_blueprint(profile_routes.bp)
+    app.register_blueprint(profile_routes.bp_admin)
     
     # Create tables with retry logic
     with app.app_context():

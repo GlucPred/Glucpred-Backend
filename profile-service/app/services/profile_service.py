@@ -2,6 +2,7 @@ from app.models import Profile
 from app.extensions import db
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
+from app.events import EventProducer
 
 
 class ProfileService:
@@ -49,7 +50,15 @@ class ProfileService:
             db.session.add(new_profile)
             db.session.commit()
             
-            return new_profile.to_dict(), None
+            profile_dict = new_profile.to_dict()
+            
+            # Publish ProfileCreated event to Kafka
+            EventProducer.publish_profile_created(
+                user_id=data['user_id'],
+                profile_data=profile_dict
+            )
+            
+            return profile_dict, None
             
         except IntegrityError:
             db.session.rollback()
@@ -137,3 +146,26 @@ class ProfileService:
             return datetime.strptime(date_string, '%Y-%m-%d').date()
         except ValueError:
             return None
+    
+    @staticmethod
+    def get_all_profiles():
+        """
+        Get all patient profiles (for doctors to view available patients)
+        Returns only profiles of users with rol='Paciente'
+        
+        Returns:
+            tuple: (list_of_profiles, error_message)
+        """
+        try:
+            # Obtener todos los perfiles
+            profiles = Profile.query.all()
+            profiles_with_user_info = []
+            
+            # Para cada perfil, convertir a diccionario
+            for profile in profiles:
+                profile_dict = profile.to_dict()
+                profiles_with_user_info.append(profile_dict)
+            
+            return profiles_with_user_info, None
+        except Exception as e:
+            return None, f'Error al obtener perfiles: {str(e)}'

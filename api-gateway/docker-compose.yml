@@ -5,6 +5,49 @@ services:
   # BASES DE DATOS
   # ==========================================
   
+  # Zookeeper for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: glucpred-zookeeper
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kafka Event Bus
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: glucpred-kafka
+    restart: always
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+  
   # MySQL Database for Authentication Service
   auth-db:
     image: mysql:8.0
@@ -53,29 +96,124 @@ services:
       start_period: 40s
     command: --default-authentication-plugin=mysql_native_password
 
+  # MySQL Database for Doctor Profile Service
+  doctor-profile-db:
+    image: mysql:8.0
+    container_name: glucpred-doctor-profile-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: glucpred_root_2024
+      MYSQL_DATABASE: doctor_profile_db
+      MYSQL_USER: doctor_profile_user
+      MYSQL_PASSWORD: doctor_profile_pass_2024
+    ports:
+      - "3309:3306"
+    volumes:
+      - doctor_profile_db_data:/var/lib/mysql
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pglucpred_root_2024"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    command: --default-authentication-plugin=mysql_native_password
+
+  # MySQL Database for Doctor-Patient Service
+  doctor-patient-db:
+    image: mysql:8.0
+    container_name: glucpred-doctor-patient-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: glucpred_root_2024
+      MYSQL_DATABASE: doctor_patient_db
+      MYSQL_USER: doctor_patient_user
+      MYSQL_PASSWORD: doctor_patient_pass_2024
+    ports:
+      - "3310:3306"
+    volumes:
+      - doctor_patient_db_data:/var/lib/mysql
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pglucpred_root_2024"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    command: --default-authentication-plugin=mysql_native_password
+
+  # MySQL Database for Records Service
+  records-db:
+    image: mysql:8.0
+    container_name: glucpred-records-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: glucpred_root_2024
+      MYSQL_DATABASE: records_db
+      MYSQL_USER: records_user
+      MYSQL_PASSWORD: records_pass_2024
+    ports:
+      - "3311:3306"
+    volumes:
+      - records_db_data:/var/lib/mysql
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pglucpred_root_2024"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    command: --default-authentication-plugin=mysql_native_password
+
+  # MySQL Database for Alerts Service
+  alerts-db:
+    image: mysql:8.0
+    container_name: glucpred-alerts-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: glucpred_root_2024
+      MYSQL_DATABASE: alerts_db
+      MYSQL_USER: alerts_user
+      MYSQL_PASSWORD: alerts_pass_2024
+    ports:
+      - "3312:3306"
+    volumes:
+      - alerts_db_data:/var/lib/mysql
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pglucpred_root_2024"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    command: --default-authentication-plugin=mysql_native_password
+
   # ==========================================
   # MICROSERVICIOS
   # ==========================================
   
   # Authentication Service
   authentication-service:
-    image: authentication-service:latest
+    image: atahualpa365/authentication-service:latest
     container_name: glucpred-auth-service
     restart: always
     ports:
       - "8081:8081"
     environment:
       # Database Configuration
-      DATABASE_URL: mysql+pymysql://auth_user:auth_pass_2024@auth-db:3306/auth_db?charset=utf8mb4
+      DATABASE_URL: mysql+pymysql://auth_user:auth_pass_2024@auth-db:3306/auth_db
       # JWT Configuration
       JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
-      JWT_EXPIRATION_HOURS: 24
-      # Flask Configuration
-      SECRET_KEY: glucpred-flask-secret-key-2024
-      DEBUG: "False"
-      SQLALCHEMY_ECHO: "False"
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
       auth-db:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - glucpred-network
@@ -88,39 +226,194 @@ services:
 
   # Profile Service
   profile-service:
-    image: profile-service:latest
+    image: atahualpa365/profile-service:latest
     container_name: glucpred-profile-service
     restart: always
     ports:
       - "8082:8082"
     environment:
       # Database Configuration
-      DATABASE_URL: mysql+pymysql://profile_user:profile_pass_2024@profile-db:3306/profile_db?charset=utf8mb4
+      DATABASE_URL: mysql+pymysql://profile_user:profile_pass_2024@profile-db:3306/profile_db
       # JWT Configuration (debe coincidir con auth-service)
       JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
-      JWT_EXPIRATION_HOURS: 24
-      # Flask Configuration
-      SECRET_KEY: glucpred-flask-secret-key-2024
-      DEBUG: "False"
-      SQLALCHEMY_ECHO: "False"
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
       profile-db:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - glucpred-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/api/profile/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8082/api/profile/paciente/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  # Doctor Profile Service
+  doctor-profile-service:
+    image: atahualpa365/doctor-profile-service:latest
+    container_name: glucpred-doctor-profile-service
+    restart: always
+    ports:
+      - "8083:8083"
+    environment:
+      # Database Configuration
+      DB_USER: doctor_profile_user
+      DB_PASSWORD: doctor_profile_pass_2024
+      DB_HOST: doctor-profile-db
+      DB_PORT: "3306"
+      DB_NAME: doctor_profile_db
+      # JWT Configuration (debe coincidir con auth-service)
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      doctor-profile-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/api/profile/medico/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Doctor-Patient Relationship Service
+  doctor-patient-service:
+    image: atahualpa365/doctor-patient-service:latest
+    container_name: glucpred-doctor-patient-service
+    restart: always
+    ports:
+      - "8084:8084"
+    environment:
+      # Database Configuration
+      DB_USER: doctor_patient_user
+      DB_PASSWORD: doctor_patient_pass_2024
+      DB_HOST: doctor-patient-db
+      DB_PORT: "3306"
+      DB_NAME: doctor_patient_db
+      # JWT Configuration
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+      # Service URLs
+      PROFILE_SERVICE_URL: http://profile-service:8082
+      DOCTOR_PROFILE_SERVICE_URL: http://doctor-profile-service:8083
+    depends_on:
+      doctor-patient-db:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/api/doctor-patient/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Records Service
+  records-service:
+    image: atahualpa365/records-service:latest
+    container_name: glucpred-records-service
+    restart: always
+    ports:
+      - "8085:8085"
+    environment:
+      # Database Configuration
+      DB_USER: records_user
+      DB_PASSWORD: records_pass_2024
+      DB_HOST: records-db
+      DB_PORT: "3306"
+      DB_NAME: records_db
+      # JWT Configuration
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      records-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/api/records/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Alerts Service
+  alerts-service:
+    image: atahualpa365/alerts-service:latest
+    container_name: glucpred-alerts-service
+    restart: always
+    ports:
+      - "8086:8086"
+    environment:
+      # Database Configuration
+      DB_USER: alerts_user
+      DB_PASSWORD: alerts_pass_2024
+      DB_HOST: alerts-db
+      DB_PORT: "3306"
+      DB_NAME: alerts_db
+      # JWT Configuration
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      PORT: 8086
+    depends_on:
+      alerts-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  # Analysis Service (ML Predictions)
+  analysis-service:
+    image: atahualpa365/analysis-service:latest
+    container_name: glucpred-analysis-service
+    restart: always
+    ports:
+      - "5001:5000"
+    environment:
+      # Flask
+      DEBUG: "False"
+      PORT: 5000
+      # JWT Configuration
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+      # Kafka Configuration
+      KAFKA_BROKER: kafka:29092
+      EVENT_TOPIC: event-bus
+      # CORS
+      CORS_ORIGINS: "*"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - glucpred-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/analysis/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   # ==========================================
   # API GATEWAY (con Swagger)
   # ==========================================
   
   api-gateway:
-    image: api-gateway:latest
+    image: atahualpa365/api-gateway:latest
     container_name: glucpred-api-gateway
     restart: always
     ports:
@@ -129,15 +422,24 @@ services:
       # Service URLs
       AUTH_SERVICE_URL: http://authentication-service:8081
       PROFILE_SERVICE_URL: http://profile-service:8082
-      # Request Configuration
-      REQUEST_TIMEOUT: 30
-      # Flask Configuration
-      SECRET_KEY: glucpred-gateway-secret-key-2024
-      DEBUG: "False"
+      DOCTOR_PROFILE_SERVICE_URL: http://doctor-profile-service:8083
+      DOCTOR_PATIENT_SERVICE_URL: http://doctor-patient-service:8084
+      RECORDS_SERVICE_URL: http://records-service:8085
+      ANALYSIS_SERVICE_URL: http://analysis-service:5000
+      # JWT Configuration
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
     depends_on:
       authentication-service:
         condition: service_healthy
       profile-service:
+        condition: service_healthy
+      doctor-profile-service:
+        condition: service_healthy
+      doctor-patient-service:
+        condition: service_healthy
+      records-service:
+        condition: service_healthy
+      alerts-service:
         condition: service_healthy
     networks:
       - glucpred-network
@@ -162,3 +464,11 @@ volumes:
     name: glucpred_auth_db_data
   profile_db_data:
     name: glucpred_profile_db_data
+  doctor_profile_db_data:
+    name: glucpred_doctor_profile_db_data
+  doctor_patient_db_data:
+    name: glucpred_doctor_patient_db_data
+  records_db_data:
+    name: glucpred_records_db_data
+  alerts_db_data:
+    name: glucpred_alerts_db_data

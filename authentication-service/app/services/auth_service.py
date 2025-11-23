@@ -85,21 +85,116 @@ class AuthService:
         if not user.check_password(password):
             return None, 'Credenciales inválidas'
         
-        # Check if it's the first login and update the flag
-        is_first_login = user.primer_inicio_sesion
-        if is_first_login:
-            try:
-                user.primer_inicio_sesion = False
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                # Continue even if update fails, it's not critical
-        
         # Generate token
         token = JWTHandler.generate_token(user)
         
-        # Include first login info in response
-        user_dict = user.to_dict()
-        user_dict['es_primer_inicio'] = is_first_login
+        # Return user info (primer_inicio_sesion will be changed when profile is created/updated)
+        return user.to_dict(), token
+    
+    @staticmethod
+    def mark_profile_complete(user_id):
+        """
+        Mark user as having completed initial profile setup
         
-        return user_dict, token
+        Args:
+            user_id (int): User ID
+            
+        Returns:
+            tuple: (success, error_message)
+        """
+        try:
+            user = User.query.get(user_id)
+            
+            if not user:
+                return False, 'Usuario no encontrado'
+            
+            if user.primer_inicio_sesion:
+                user.primer_inicio_sesion = False
+                db.session.commit()
+            
+            return True, None
+            
+        except Exception as e:
+            db.session.rollback()
+            return False, f'Error al actualizar usuario: {str(e)}'
+    
+    @staticmethod
+    def get_user_data(user_id):
+        """
+        Get user data by ID
+        
+        Args:
+            user_id (int): User ID
+            
+        Returns:
+            tuple: (user_dict, None) or (None, error_message)
+        """
+        user = User.query.get(user_id)
+        
+        if not user:
+            return None, 'Usuario no encontrado'
+        
+        return user.to_dict(), None
+    
+    @staticmethod
+    def update_user_data(user_id, data):
+        """
+        Update user data
+        
+        Args:
+            user_id (int): User ID
+            data (dict): Data to update
+            
+        Returns:
+            tuple: (user_dict, None) or (None, error_message)
+        """
+        user = User.query.get(user_id)
+        
+        if not user:
+            return None, 'Usuario no encontrado'
+        
+        try:
+            # Check for unique constraints if updating username or email
+            if 'username' in data and data['username'] != user.username:
+                existing = User.query.filter_by(username=data['username']).first()
+                if existing:
+                    return None, 'El nombre de usuario ya está en uso'
+                user.username = data['username']
+            
+            if 'email' in data and data['email'] != user.email:
+                existing = User.query.filter_by(email=data['email']).first()
+                if existing:
+                    return None, 'El correo electrónico ya está registrado'
+                user.email = data['email']
+            
+            # Update other fields
+            if 'nombre_completo' in data:
+                user.nombre_completo = data['nombre_completo']
+            
+            if 'numero_celular' in data:
+                user.numero_celular = data['numero_celular']
+            
+            db.session.commit()
+            
+            return user.to_dict(), None
+            
+        except IntegrityError:
+            db.session.rollback()
+            return None, 'Error: datos duplicados'
+        except Exception as e:
+            db.session.rollback()
+            return None, f'Error al actualizar usuario: {str(e)}'
+    
+    @staticmethod
+    def get_all_users():
+        """
+        Get all users with basic information
+        
+        Returns:
+            tuple: (list_of_users, error_message)
+        """
+        try:
+            users = User.query.all()
+            return [u.to_dict() for u in users], None
+        except Exception as e:
+            return None, f'Error al obtener usuarios: {str(e)}'
