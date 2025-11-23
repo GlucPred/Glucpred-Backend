@@ -4,6 +4,7 @@ from app.middleware import JWTAuthMiddleware
 
 
 bp = Blueprint('patient_profile', __name__, url_prefix='/api/profile/paciente')
+bp_admin = Blueprint('profile_admin', __name__, url_prefix='/api/profile')
 token_required = JWTAuthMiddleware.token_required
 
 
@@ -112,3 +113,32 @@ def health():
         'status': 'healthy',
         'service': 'profile-service'
     }), 200
+
+
+@bp_admin.route('/all', methods=['GET'])
+@token_required
+def get_all_profiles():
+    """
+    Get all patient profiles (for doctor to view available patients)
+    Only accessible by doctors or admins
+    """
+    try:
+        # Verificar que el usuario tenga rol de doctor (el token usa 'rol' y el valor es 'Medico')
+        user_role = request.current_user.get('rol')
+        if user_role != 'Medico':
+            return jsonify({'error': 'Acceso denegado. Solo médicos pueden ver todos los perfiles'}), 403
+        
+        profiles, error = ProfileService.get_all_profiles()
+        
+        if error:
+            return jsonify({'error': error}), 500
+        
+        return jsonify({
+            'profiles': profiles,
+            'total': len(profiles)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error interno del servidor: {str(e)}'
+        }), 500

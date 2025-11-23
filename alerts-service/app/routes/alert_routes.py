@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.middleware.auth_middleware import token_required, doctor_required
 from app.services.alert_service import AlertService
+import requests
 
 bp = Blueprint('alerts', __name__, url_prefix='/api/alerts')
 
@@ -165,6 +166,108 @@ def create_reminder():
     }), 201
 
 # ========== ENDPOINTS PARA MÉDICOS ==========
+
+@bp.route('/my-patients', methods=['GET'])
+@token_required
+@doctor_required
+def get_all_my_patients_alerts():
+    """
+    Médicos pueden ver todas las alertas de todos sus pacientes asignados.
+    
+    Query params: type, severity, limit, offset
+    """
+    from config.settings import Config
+    
+    doctor_user_id = request.user_id
+    
+    # Obtener lista de pacientes asignados del doctor-patient-service
+    try:
+        token = request.headers.get('Authorization').split(' ')[1]
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        # Llamar al doctor-patient-service para obtener los patient_ids
+        response = requests.get(
+            f'http://doctor-patient-service:8084/api/doctor-patient/my-patients',
+            headers=headers,
+            timeout=5
+        )
+        
+        if response.status_code != 200:
+            return jsonify({'error': 'No se pudieron obtener los pacientes asignados'}), 500
+        
+        patients_data = response.json()
+        patient_ids = [p['patient_user_id'] for p in patients_data.get('patients', [])]
+        
+        if not patient_ids:
+            return jsonify({
+                'alerts': [],
+                'total': 0,
+                'limit': 0,
+                'offset': 0
+            }), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Error al obtener pacientes: {str(e)}'}), 500
+    
+    # Parsear filtros
+    alert_type_param = request.args.get('type', 'todas')
+    alert_type = None if alert_type_param == 'todas' else alert_type_param
+    
+    severity = request.args.get('severity')
+    limit = int(request.args.get('limit', 100))
+    offset = int(request.args.get('offset', 0))
+    
+    # Obtener alertas de todos los pacientes
+    all_alerts = []
+    for patient_id in patient_ids:
+        alerts, _ = AlertService.get_user_alerts(
+            user_id=patient_id,
+            alert_type=alert_type,
+            severity=severity,
+            limit=None,  # Sin límite para obtener todas
+            offset=0
+        )
+        all_alerts.extend(alerts)
+    
+    # Ordenar por fecha de creación (más recientes primero)
+    all_alerts.sort(key=lambda x: x.created_at, reverse=True)
+    
+    # Aplicar paginación
+    total = len(all_alerts)
+    paginated_alerts = all_alerts[offset:offset + limit]
+    
+    # Obtener información de pacientes (nombres) del authentication-service
+    try:
+        auth_response = requests.get(
+            'http://authentication-service:8081/api/auth/users',
+            headers=headers,
+            timeout=5
+        )
+        
+        if auth_response.status_code == 200:
+            users = auth_response.json().get('users', [])
+            users_map = {u['id']: u['nombre_completo'] for u in users}
+        else:
+            users_map = {}
+    except:
+        users_map = {}
+    
+    # Enriquecer alertas con nombre del paciente
+    alerts_with_patient = []
+    for alert in paginated_alerts:
+        alert_dict = alert.to_dict()
+        alert_dict['patient_name'] = users_map.get(alert.user_id, 'Desconocido')
+        alert_dict['patient_id'] = alert.user_id
+        alerts_with_patient.append(alert_dict)
+    
+    return jsonify({
+        'alerts': alerts_with_patient,
+        'total': total,
+        'limit': limit,
+        'offset': offset,
+        'patients_count': len(patient_ids)
+    }), 200
+
 
 @bp.route('/patient/<int:patient_id>', methods=['GET'])
 @token_required
