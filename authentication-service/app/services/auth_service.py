@@ -184,3 +184,17 @@ class AuthService:
         except Exception as e:
             db.session.rollback()
             return None, f'Error al actualizar usuario: {str(e)}'
+    
+    @staticmethod
+    def get_all_users():
+        """
+        Get all users with basic information
+        
+        Returns:
+            tuple: (list_of_users, error_message)
+        """
+        try:
+            users = User.query.all()
+            return [u.to_dict() for u in users], None
+        except Exception as e:
+            return None, f'Error al obtener usuarios: {str(e)}'

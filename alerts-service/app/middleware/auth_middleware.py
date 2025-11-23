@@ -21,7 +21,7 @@ def token_required(f):
         try:
             data = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=['HS256'])
             request.user_id = data['user_id']
-            request.user_role = data.get('role', 'paciente')
+            request.user_role = data.get('rol', 'Paciente')
         except jwt.ExpiredSignatureError:
             return jsonify({'error': 'Token expirado'}), 401
         except jwt.InvalidTokenError:
@@ -34,7 +34,7 @@ def token_required(f):
 def doctor_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if request.user_role != 'medico':
+        if request.user_role != 'Medico':
             return jsonify({'error': 'Acceso denegado. Solo médicos'}), 403
         return f(*args, **kwargs)
     

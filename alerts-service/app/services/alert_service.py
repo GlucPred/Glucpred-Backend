@@ -101,6 +101,72 @@ class AlertService:
         return alert
     
     @staticmethod
+    def create_alert_from_prediction(user_id, prediction, alert_level, probabilities, recommendation, glucose_value):
+        """
+        Crea una alerta basada en la predicción del modelo ML.
+        
+        Args:
+            user_id: ID del usuario
+            prediction: "Normal", "Hipoglucemia" o "Hiperglucemia"
+            alert_level: "Bajo", "Medio" o "Alto"
+            probabilities: Dict con probabilidades de cada clase
+            recommendation: Mensaje de recomendación
+            glucose_value: Valor de glucosa usado en la predicción
+        
+        Returns:
+            Alert object o None si alert_level es Bajo
+        """
+        # No crear alerta si es nivel Bajo
+        if alert_level == "Bajo":
+            return None
+        
+        # Mapear predicción a tipo de alerta
+        alert_type = 'critica'
+        
+        # Determinar severidad
+        if alert_level == "Alto":
+            severity = 'critico'
+        elif alert_level == "Medio":
+            severity = 'advertencia'
+        else:
+            severity = 'info'
+        
+        # Generar título basado en la predicción
+        if prediction == "Hiperglucemia":
+            title = "Posible Hiperglucemia"
+        elif prediction == "Hipoglucemia":
+            title = "Posible Hipoglucemia"
+        else:
+            title = f"Predicción: {prediction}"
+        
+        # Construir mensaje con probabilidades
+        prob_text = "\n".join([
+            f"• {clase}: {prob*100:.1f}%"
+            for clase, prob in probabilities.items()
+        ])
+        
+        message = f"{recommendation}\n\nProbabilidades:\n{prob_text}\n\nNivel de glucosa actual: {glucose_value} mg/dL"
+        
+        # No verificar duplicados - cada predicción es única y debe registrarse
+        # El usuario puede tener múltiples predicciones del mismo tipo en diferentes momentos
+        
+        # Crear nueva alerta
+        alert = Alert(
+            user_id=user_id,
+            glucose_record_id=None,  # Las predicciones no tienen record_id
+            glucose_value=glucose_value,
+            alert_type=alert_type,
+            severity=severity,
+            title=title,
+            message=message
+        )
+        
+        db.session.add(alert)
+        db.session.commit()
+        
+        return alert
+    
+    @staticmethod
     def create_reminder(user_id, title, message):
         """
         Crea un recordatorio manual (no basado en glucosa).

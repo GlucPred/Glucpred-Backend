@@ -198,7 +198,7 @@ services:
   
   # Authentication Service
   authentication-service:
-    image: authentication-service:latest
+    image: atahualpa365/authentication-service:latest
     container_name: glucpred-auth-service
     restart: always
     ports:
@@ -226,7 +226,7 @@ services:
 
   # Profile Service
   profile-service:
-    image: profile-service:latest
+    image: atahualpa365/profile-service:latest
     container_name: glucpred-profile-service
     restart: always
     ports:
@@ -254,7 +254,7 @@ services:
 
   # Doctor Profile Service
   doctor-profile-service:
-    image: doctor-profile-service:latest
+    image: atahualpa365/doctor-profile-service:latest
     container_name: glucpred-doctor-profile-service
     restart: always
     ports:
@@ -286,7 +286,7 @@ services:
 
   # Doctor-Patient Relationship Service
   doctor-patient-service:
-    image: doctor-patient-service:latest
+    image: atahualpa365/doctor-patient-service:latest
     container_name: glucpred-doctor-patient-service
     restart: always
     ports:
@@ -317,7 +317,7 @@ services:
 
   # Records Service
   records-service:
-    image: records-service:latest
+    image: atahualpa365/records-service:latest
     container_name: glucpred-records-service
     restart: always
     ports:
@@ -349,7 +349,7 @@ services:
 
   # Alerts Service
   alerts-service:
-    image: alerts-service:latest
+    image: atahualpa365/alerts-service:latest
     container_name: glucpred-alerts-service
     restart: always
     ports:
@@ -378,35 +378,42 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+  # Analysis Service (ML Predictions)
   analysis-service:
-    image: analysis-service:latest
+    image: atahualpa365/analysis-service:latest
     container_name: glucpred-analysis-service
     restart: always
     ports:
       - "5001:5000"
     environment:
+      # Flask
+      DEBUG: "False"
+      PORT: 5000
+      # JWT Configuration
+      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
       # Kafka Configuration
       KAFKA_BROKER: kafka:29092
       EVENT_TOPIC: event-bus
-      # JWT Configuration
-      JWT_SECRET_KEY: glucpred-jwt-secret-key-2024-change-in-production
+      # CORS
+      CORS_ORIGINS: "*"
     depends_on:
       kafka:
         condition: service_healthy
     networks:
       - glucpred-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/analysis/predict"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/analysis/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 20s
 
   # ==========================================
   # API GATEWAY (con Swagger)
   # ==========================================
   
   api-gateway:
-    image: api-gateway:latest
+    image: atahualpa365/api-gateway:latest
     container_name: glucpred-api-gateway
     restart: always
     ports:

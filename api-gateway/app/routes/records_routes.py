@@ -241,6 +241,46 @@ def get_history_for_user(user_id):
     )
 
 
+@bp.route('/my-patients', methods=['GET'])
+def get_all_my_patients_records():
+    """Obtener registros de todos los pacientes asignados (solo médicos)
+    ---
+    tags:
+      - Records
+    security:
+      - Bearer: []
+    parameters:
+      - name: limit
+        in: query
+        type: integer
+        description: Número de registros a devolver
+        default: 100
+      - name: offset
+        in: query
+        type: integer
+        description: Desplazamiento para paginación
+        default: 0
+      - name: start_date
+        in: query
+        type: string
+        description: Fecha de inicio (YYYY-MM-DD)
+      - name: end_date
+        in: query
+        type: string
+        description: Fecha de fin (YYYY-MM-DD)
+    responses:
+      200:
+        description: Lista de registros de todos los pacientes asignados
+      403:
+        description: Acceso denegado
+    """
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        '/api/records/my-patients',
+        flask_request=request
+    )
+
+
 @bp.route('/statistics', methods=['GET'])
 def get_statistics():
     """Obtener estadísticas de glucosa del usuario autenticado

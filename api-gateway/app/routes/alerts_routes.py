@@ -240,6 +240,42 @@ def create_reminder():
 
 # ========== ENDPOINTS PARA MÉDICOS ==========
 
+@bp.route('/my-patients', methods=['GET'])
+def get_my_patients_alerts():
+    """
+    Ver todas las alertas de todos los pacientes asignados al médico
+    ---
+    tags:
+      - Alerts
+    security:
+      - Bearer: []
+    parameters:
+      - in: query
+        name: type
+        type: string
+        description: Tipo de alerta (todas, hipoglucemia, hiperglucemia, tendencia, recordatorio)
+      - in: query
+        name: severity
+        type: string
+        description: Severidad (critico, advertencia)
+      - in: query
+        name: limit
+        type: integer
+        description: Número de alertas a retornar
+      - in: query
+        name: offset
+        type: integer
+        description: Offset para paginación
+    responses:
+      200:
+        description: Lista de alertas de todos los pacientes
+    """
+    return ServiceProxy.forward_request(
+        Config.ALERTS_SERVICE_URL,
+        '/api/alerts/my-patients',
+        flask_request=request
+    )
+
 @bp.route('/patient/<int:patient_id>', methods=['GET'])
 def get_patient_alerts(patient_id):
     """
