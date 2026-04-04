@@ -13,7 +13,7 @@ class Config:
     ALERTS_SERVICE_URL = os.getenv('ALERTS_SERVICE_URL', 'http://alerts-service:8086')
     
     # JWT Configuration
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-here')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'CHANGE-THIS-SECRET-IN-PRODUCTION')
     
     # Request configuration
     REQUEST_TIMEOUT = int(os.getenv('REQUEST_TIMEOUT', 30))

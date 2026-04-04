@@ -1,8 +1,14 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from app.utils import ServiceProxy
 from app.middleware import extract_auth_header
 from config.settings import Config
 import jwt
+import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY', 'glucpred-internal-key-change-in-production')
 
 bp = Blueprint('patient_profile', __name__, url_prefix='/api/profile/paciente')
 
@@ -130,16 +136,17 @@ def get_profile(headers):
         if not token:
             return jsonify({'error': 'Token no proporcionado'}), 401
         
-        # Decode to get user_id (without verification, just to extract user_id)
-        payload = jwt.decode(token, options={"verify_signature": False})
+        payload = jwt.decode(token, current_app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
         user_id = payload.get('user_id')
         
         # Call both services
         # 1. Get user data from auth-service
+        internal_headers = {'X-Internal-Api-Key': INTERNAL_API_KEY}
         user_data, user_status = ServiceProxy.forward_request(
             Config.AUTH_SERVICE_URL,
             f'/api/auth/internal/user/{user_id}',
-            method='GET'
+            method='GET',
+            headers=internal_headers
         )
         
         if user_status != 200:
@@ -171,7 +178,8 @@ def get_profile(headers):
         }), 200
         
     except Exception as e:
-        return jsonify({'error': f'Error al obtener perfil: {str(e)}'}), 500
+        logger.error(f'Error al obtener perfil: {str(e)}', exc_info=True)
+        return jsonify({'error': 'Error interno del servidor'}), 500
 
 
 
@@ -254,7 +262,7 @@ def update_profile(headers):
         if not token:
             return jsonify({'error': 'Token no proporcionado'}), 401
         
-        payload = jwt.decode(token, options={"verify_signature": False})
+        payload = jwt.decode(token, current_app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
         user_id = payload.get('user_id')
         
         # Separate user data from profile data
@@ -268,11 +276,13 @@ def update_profile(headers):
         
         # Update user data if provided
         if user_data:
+            internal_headers = {'X-Internal-Api-Key': INTERNAL_API_KEY}
             user_result, user_status = ServiceProxy.forward_request(
                 Config.AUTH_SERVICE_URL,
                 f'/api/auth/internal/user/{user_id}',
                 method='PUT',
-                data=user_data
+                data=user_data,
+                headers=internal_headers
             )
             
             if user_status != 200:
@@ -301,4 +311,5 @@ def update_profile(headers):
         }), 200
         
     except Exception as e:
-        return jsonify({'error': f'Error al actualizar perfil: {str(e)}'}), 500
+        logger.error(f'Error al actualizar perfil: {str(e)}', exc_info=True)
+        return jsonify({'error': 'Error interno del servidor'}), 500

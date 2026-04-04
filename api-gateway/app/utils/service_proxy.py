@@ -1,6 +1,9 @@
 import requests
 from flask import jsonify, request
 from config.settings import Config
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ServiceProxy:
@@ -61,6 +64,8 @@ class ServiceProxy:
         except requests.exceptions.Timeout:
             return {'error': 'Timeout al conectar con el servicio'}, 504
         except requests.exceptions.RequestException as e:
-            return {'error': f'Error al conectar con el servicio: {str(e)}'}, 500
+            logger.error(f'Error al conectar con servicio: {str(e)}', exc_info=True)
+            return {'error': 'Error al conectar con el servicio'}, 500
         except Exception as e:
-            return {'error': f'Error al procesar la solicitud: {str(e)}'}, 500
+            logger.error(f'Error al procesar solicitud: {str(e)}', exc_info=True)
+            return {'error': 'Error al procesar la solicitud'}, 500

@@ -14,7 +14,10 @@ def create_app():
     
     # Initialize extensions
     db.init_app(app)
-    cors.init_app(app)
+    cors.init_app(app, origins=[
+        'http://localhost:*',
+        'http://127.0.0.1:*',
+    ], supports_credentials=True)
     
     # Register blueprints
     app.register_blueprint(alert_routes.bp)

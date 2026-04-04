@@ -57,7 +57,7 @@ def predict():
         hour = int(data['hour']) if 'hour' in data else None
     except (ValueError, TypeError) as e:
         return jsonify({
-            "error": f"Error en el formato de entrada: {str(e)}"
+            "error": "Error en el formato de entrada"
         }), 400
     
     # Realizar predicción
@@ -115,5 +115,5 @@ def health():
         return jsonify({
             'status': 'unhealthy',
             'service': 'analysis-service',
-            'error': str(e)
+            'error': 'Error al cargar modelo'
         }), 503

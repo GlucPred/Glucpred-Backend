@@ -40,8 +40,8 @@ class MedicalObservationService:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error creating observation: {e}")
-            return None, str(e)
+            logger.error(f"Error creating observation: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_patient_observations(patient_user_id, doctor_user_id=None, limit=100, offset=0):
@@ -72,8 +72,8 @@ class MedicalObservationService:
             return [obs.to_dict() for obs in observations], total, None
             
         except Exception as e:
-            logger.error(f"Error getting patient observations: {e}")
-            return None, 0, str(e)
+            logger.error(f"Error getting patient observations: {e}", exc_info=True)
+            return None, 0, 'Error interno del servidor'
     
     @staticmethod
     def update_observation(observation_id, doctor_user_id, observation_text):
@@ -110,8 +110,8 @@ class MedicalObservationService:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error updating observation: {e}")
-            return None, str(e)
+            logger.error(f"Error updating observation: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def delete_observation(observation_id, doctor_user_id):
@@ -142,8 +142,8 @@ class MedicalObservationService:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error deleting observation: {e}")
-            return False, str(e)
+            logger.error(f"Error deleting observation: {e}", exc_info=True)
+            return False, 'Error interno del servidor'
     
     @staticmethod
     def get_observation_by_id(observation_id, doctor_user_id):
@@ -169,5 +169,5 @@ class MedicalObservationService:
             return observation.to_dict(), None
             
         except Exception as e:
-            logger.error(f"Error getting observation: {e}")
-            return None, str(e)
+            logger.error(f"Error getting observation: {e}", exc_info=True)
+            return None, 'Error interno del servidor'

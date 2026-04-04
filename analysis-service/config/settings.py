@@ -8,7 +8,7 @@ class Config:
     PORT = int(os.getenv('PORT', 5000))
     
     # JWT
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'glucpred-jwt-secret-key-2024-change-in-production')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'CHANGE-THIS-SECRET-IN-PRODUCTION')
     
     # Kafka
     KAFKA_BROKER = os.getenv('KAFKA_BROKER', 'kafka:29092')

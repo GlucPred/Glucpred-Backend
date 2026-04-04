@@ -140,5 +140,5 @@ def predict():
         }), 502
     except Exception as e:
         return jsonify({
-            'error': f'Error inesperado: {str(e)}'
+            'error': 'Error inesperado'
         }), 502

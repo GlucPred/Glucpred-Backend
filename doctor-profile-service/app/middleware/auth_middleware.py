@@ -29,7 +29,7 @@ class JWTAuthMiddleware:
             
             try:
                 # Decode token (without verification for now, as we trust the gateway)
-                payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=['HS256'], options={"verify_signature": False})
+                payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=['HS256'])
                 
                 # Store user info in request context
                 request.current_user = payload

@@ -70,7 +70,7 @@ class PredictionService:
         try:
             model = cls.get_model()
         except Exception as e:
-            return {"error": f"No se pudo cargar el modelo: {str(e)}"}
+            return {"error": "No se pudo cargar el modelo de predicción"}
         
         # Hora actual si no se proporciona
         if hour is None:

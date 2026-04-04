@@ -1,5 +1,23 @@
 from flask import Blueprint, request, jsonify
 from app.services import AuthService
+from functools import wraps
+import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY', 'glucpred-internal-key-change-in-production')
+
+
+def internal_service_required(f):
+    """Decorator to validate internal service API key"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        api_key = request.headers.get('X-Internal-Api-Key')
+        if not api_key or api_key != INTERNAL_API_KEY:
+            return jsonify({'error': 'Acceso no autorizado - Se requiere API key interna'}), 403
+        return f(*args, **kwargs)
+    return decorated
 
 
 bp = Blueprint('auth', __name__, url_prefix='/api/auth')
@@ -25,7 +43,7 @@ def register():
         user_dict, token = AuthService.register_user(data)
         
         if user_dict is None:
-            return jsonify({'error': token}), 400 if 'requerido' in token or 'coinciden' in token else 409
+            return jsonify({'error': token['error']}), token.get('status_code', 500)
         
         return jsonify({
             'message': 'Usuario registrado exitosamente',
@@ -34,8 +52,9 @@ def register():
         }), 201
         
     except Exception as e:
+        logger.error(f'Error en registro: {str(e)}', exc_info=True)
         return jsonify({
-            'error': f'Error interno del servidor: {str(e)}'
+            'error': 'Error interno del servidor'
         }), 500
 
 
@@ -57,7 +76,7 @@ def login():
         user_dict, token = AuthService.login_user(username_or_email, password)
         
         if user_dict is None:
-            return jsonify({'error': token}), 400 if 'requeridos' in token else 401
+            return jsonify({'error': token['error']}), token.get('status_code', 500)
         
         return jsonify({
             'message': 'Login exitoso',
@@ -66,8 +85,9 @@ def login():
         }), 200
         
     except Exception as e:
+        logger.error(f'Error en login: {str(e)}', exc_info=True)
         return jsonify({
-            'error': f'Error interno del servidor: {str(e)}'
+            'error': 'Error interno del servidor'
         }), 500
 
 
@@ -81,6 +101,7 @@ def health():
 
 
 @bp.route('/internal/mark-profile-complete/<int:user_id>', methods=['POST'])
+@internal_service_required
 def mark_profile_complete(user_id):
     """
     Internal endpoint to mark user as having completed initial profile setup
@@ -97,12 +118,14 @@ def mark_profile_complete(user_id):
         }), 200
         
     except Exception as e:
+        logger.error(f'Error en mark_profile_complete: {str(e)}', exc_info=True)
         return jsonify({
-            'error': f'Error interno del servidor: {str(e)}'
+            'error': 'Error interno del servidor'
         }), 500
 
 
 @bp.route('/internal/user/<int:user_id>', methods=['GET'])
+@internal_service_required
 def get_user_data(user_id):
     """
     Internal endpoint to get user data
@@ -117,12 +140,14 @@ def get_user_data(user_id):
         return jsonify({'user': user_dict}), 200
         
     except Exception as e:
+        logger.error(f'Error en get_user_data: {str(e)}', exc_info=True)
         return jsonify({
-            'error': f'Error interno del servidor: {str(e)}'
+            'error': 'Error interno del servidor'
         }), 500
 
 
 @bp.route('/internal/user/<int:user_id>', methods=['PUT'])
+@internal_service_required
 def update_user_data(user_id):
     """
     Internal endpoint to update user data
@@ -140,7 +165,10 @@ def update_user_data(user_id):
         user_dict, error = AuthService.update_user_data(user_id, data)
         
         if user_dict is None:
-            status_code = 400 if 'uso' in error or 'registrado' in error else 404
+            if 'uso' in error or 'registrado' in error:
+                status_code = 400
+            else:
+                status_code = 404
             return jsonify({'error': error}), status_code
         
         return jsonify({
@@ -149,12 +177,14 @@ def update_user_data(user_id):
         }), 200
         
     except Exception as e:
+        logger.error(f'Error en update_user_data: {str(e)}', exc_info=True)
         return jsonify({
-            'error': f'Error interno del servidor: {str(e)}'
+            'error': 'Error interno del servidor'
         }), 500
 
 
 @bp.route('/users', methods=['GET'])
+@internal_service_required
 def get_all_users():
     """
     Get all users (for internal microservice use)
@@ -172,6 +202,7 @@ def get_all_users():
         }), 200
         
     except Exception as e:
+        logger.error(f'Error en get_all_users: {str(e)}', exc_info=True)
         return jsonify({
-            'error': f'Error interno del servidor: {str(e)}'
+            'error': 'Error interno del servidor'
         }), 500

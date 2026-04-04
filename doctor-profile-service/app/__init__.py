@@ -16,7 +16,10 @@ def create_app():
     
     # Initialize extensions
     db.init_app(app)
-    CORS(app)
+    CORS(app, origins=[
+        'http://localhost:*',
+        'http://127.0.0.1:*',
+    ], supports_credentials=True)
     
     # Register blueprints
     app.register_blueprint(doctor_profile_routes.bp)
