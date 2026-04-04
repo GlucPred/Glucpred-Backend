@@ -70,8 +70,8 @@ class DoctorPatientService:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error assigning patient to doctor: {e}")
-            return None, str(e)
+            logger.error(f"Error assigning patient to doctor: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def deactivate_relation(doctor_user_id, patient_user_id):
@@ -106,8 +106,8 @@ class DoctorPatientService:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error deactivating relation: {e}")
-            return None, str(e)
+            logger.error(f"Error deactivating relation: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_doctor_patients(doctor_user_id, estado=None):
@@ -134,8 +134,8 @@ class DoctorPatientService:
             return [r.to_dict() for r in relations], None
             
         except Exception as e:
-            logger.error(f"Error getting doctor's patients: {e}")
-            return None, str(e)
+            logger.error(f"Error getting doctor's patients: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_patient_doctors(patient_user_id, estado=None):
@@ -162,8 +162,8 @@ class DoctorPatientService:
             return [r.to_dict() for r in relations], None
             
         except Exception as e:
-            logger.error(f"Error getting patient's doctors: {e}")
-            return None, str(e)
+            logger.error(f"Error getting patient's doctors: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_all_patients_available_for_doctor(doctor_user_id):
@@ -193,8 +193,8 @@ class DoctorPatientService:
             }, None
             
         except Exception as e:
-            logger.error(f"Error getting available patients: {e}")
-            return None, str(e)
+            logger.error(f"Error getting available patients: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def check_patient_availability(patient_user_id):
@@ -228,5 +228,5 @@ class DoctorPatientService:
                 }, None
                 
         except Exception as e:
-            logger.error(f"Error checking patient availability: {e}")
-            return None, str(e)
+            logger.error(f"Error checking patient availability: {e}", exc_info=True)
+            return None, 'Error interno del servidor'

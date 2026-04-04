@@ -64,8 +64,8 @@ class DoctorProfileService:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error creating doctor profile: {e}")
-            return None, str(e)
+            logger.error(f"Error creating doctor profile: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_doctor_profile(user_id):
@@ -87,8 +87,8 @@ class DoctorProfileService:
             return profile.to_dict(), None
             
         except Exception as e:
-            logger.error(f"Error getting doctor profile: {e}")
-            return None, str(e)
+            logger.error(f"Error getting doctor profile: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def update_doctor_profile(user_id, data):
@@ -124,5 +124,5 @@ class DoctorProfileService:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error updating doctor profile: {e}")
-            return None, str(e)
+            logger.error(f"Error updating doctor profile: {e}", exc_info=True)
+            return None, 'Error interno del servidor'

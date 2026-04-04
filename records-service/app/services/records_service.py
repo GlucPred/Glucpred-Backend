@@ -92,8 +92,8 @@ class RecordsService:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error creating glucose record: {e}")
-            return None, str(e)
+            logger.error(f"Error creating glucose record: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_latest_record(user_id):
@@ -117,8 +117,8 @@ class RecordsService:
             return record.to_dict(), None
             
         except Exception as e:
-            logger.error(f"Error getting latest record: {e}")
-            return None, str(e)
+            logger.error(f"Error getting latest record: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_records_by_timerange(user_id, hours=12):
@@ -143,8 +143,8 @@ class RecordsService:
             return [r.to_dict() for r in records], None
             
         except Exception as e:
-            logger.error(f"Error getting records by timerange: {e}")
-            return None, str(e)
+            logger.error(f"Error getting records by timerange: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_records_history(user_id, limit=100, offset=0, start_date=None, end_date=None):
@@ -193,8 +193,8 @@ class RecordsService:
             }, None
             
         except Exception as e:
-            logger.error(f"Error getting records history: {e}")
-            return None, str(e)
+            logger.error(f"Error getting records history: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_statistics(user_id, hours=24):
@@ -239,8 +239,8 @@ class RecordsService:
             return stats, None
             
         except Exception as e:
-            logger.error(f"Error calculating statistics: {e}")
-            return None, str(e)
+            logger.error(f"Error calculating statistics: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def delete_record(record_id, user_id):
@@ -268,5 +268,5 @@ class RecordsService:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error deleting record: {e}")
-            return False, str(e)
+            logger.error(f"Error deleting record: {e}", exc_info=True)
+            return False, 'Error interno del servidor'

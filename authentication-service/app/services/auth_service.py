@@ -17,19 +17,19 @@ class AuthService:
             data (dict): User registration data
             
         Returns:
-            tuple: (user_dict, token) or (None, error_message)
+            tuple: (user_dict, token) or (None, {'error': message, 'status_code': code})
         """
         # Validate input data
         is_valid, error = AuthValidator.validate_registration(data)
         if not is_valid:
-            return None, error
+            return None, {'error': error, 'status_code': 400}
         
         # Check if user already exists
         if User.query.filter_by(username=data['username']).first():
-            return None, 'El nombre de usuario ya está en uso'
+            return None, {'error': 'El nombre de usuario ya está en uso', 'status_code': 409}
         
         if User.query.filter_by(email=data['email']).first():
-            return None, 'El correo electrónico ya está registrado'
+            return None, {'error': 'El correo electrónico ya está registrado', 'status_code': 409}
         
         try:
             # Create new user
@@ -52,10 +52,12 @@ class AuthService:
             
         except IntegrityError:
             db.session.rollback()
-            return None, 'Error al registrar el usuario. Verifique que los datos sean únicos.'
+            return None, {'error': 'Error al registrar el usuario. Verifique que los datos sean únicos.', 'status_code': 409}
         except Exception as e:
             db.session.rollback()
-            return None, f'Error interno del servidor: {str(e)}'
+            import logging
+            logging.getLogger(__name__).error(f'Error en registro: {str(e)}', exc_info=True)
+            return None, {'error': 'Error interno del servidor', 'status_code': 500}
     
     @staticmethod
     def login_user(username_or_email, password):
@@ -67,11 +69,11 @@ class AuthService:
             password (str): User password
             
         Returns:
-            tuple: (user_dict, token) or (None, error_message)
+            tuple: (user_dict, token) or (None, {'error': message, 'status_code': code})
         """
         # Validate input
         if not username_or_email or not password:
-            return None, 'Usuario/correo y contraseña son requeridos'
+            return None, {'error': 'Usuario/correo y contraseña son requeridos', 'status_code': 400}
         
         # Find user by username or email
         user = User.query.filter(
@@ -79,11 +81,11 @@ class AuthService:
         ).first()
         
         if not user:
-            return None, 'Credenciales inválidas'
+            return None, {'error': 'Credenciales inválidas', 'status_code': 401}
         
         # Verify password
         if not user.check_password(password):
-            return None, 'Credenciales inválidas'
+            return None, {'error': 'Credenciales inválidas', 'status_code': 401}
         
         # Generate token
         token = JWTHandler.generate_token(user)
@@ -116,7 +118,9 @@ class AuthService:
             
         except Exception as e:
             db.session.rollback()
-            return False, f'Error al actualizar usuario: {str(e)}'
+            import logging
+            logging.getLogger(__name__).error(f'Error al actualizar usuario: {str(e)}', exc_info=True)
+            return False, 'Error al actualizar usuario'
     
     @staticmethod
     def get_user_data(user_id):
@@ -183,7 +187,9 @@ class AuthService:
             return None, 'Error: datos duplicados'
         except Exception as e:
             db.session.rollback()
-            return None, f'Error al actualizar usuario: {str(e)}'
+            import logging
+            logging.getLogger(__name__).error(f'Error al actualizar usuario: {str(e)}', exc_info=True)
+            return None, 'Error al actualizar usuario'
     
     @staticmethod
     def get_all_users():
@@ -197,4 +203,6 @@ class AuthService:
             users = User.query.all()
             return [u.to_dict() for u in users], None
         except Exception as e:
-            return None, f'Error al obtener usuarios: {str(e)}'
+            import logging
+            logging.getLogger(__name__).error(f'Error al obtener usuarios: {str(e)}', exc_info=True)
+            return None, 'Error al obtener usuarios'

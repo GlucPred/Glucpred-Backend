@@ -11,7 +11,10 @@ def create_app():
     app.config.from_object(Config)
     
     # Initialize CORS
-    CORS(app)
+    CORS(app, origins=[
+        'http://localhost:*',
+        'http://127.0.0.1:*',
+    ], supports_credentials=True)
     
     # Initialize Swagger
     init_swagger(app)

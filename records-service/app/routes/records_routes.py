@@ -74,8 +74,8 @@ def get_latest(current_user_id, user_role):
 @token_required
 def get_latest_for_user(current_user_id, user_role, user_id):
     """Get the most recent glucose record for a specific user (doctors only)"""
-    # For now, anyone authenticated can query any user
-    # TODO: Add doctor-patient relationship validation
+    if str(current_user_id) != str(user_id) and user_role != 'Medico':
+        return jsonify({'error': 'No autorizado para acceder a estos datos'}), 403
     
     result, error = RecordsService.get_latest_record(user_id)
     
@@ -116,6 +116,9 @@ def get_trend(current_user_id, user_role):
 @token_required
 def get_trend_for_user(current_user_id, user_role, user_id):
     """Get glucose trend for a specific user (doctors can view their patients)"""
+    if str(current_user_id) != str(user_id) and user_role != 'Medico':
+        return jsonify({'error': 'No autorizado para acceder a estos datos'}), 403
+    
     hours = request.args.get('hours', 12, type=int)
     
     if hours < 1 or hours > 720:
@@ -169,6 +172,9 @@ def get_history(current_user_id, user_role):
 @token_required
 def get_history_for_user(current_user_id, user_role, user_id):
     """Get paginated glucose history for a specific user"""
+    if str(current_user_id) != str(user_id) and user_role != 'Medico':
+        return jsonify({'error': 'No autorizado para acceder a estos datos'}), 403
+    
     limit = min(request.args.get('limit', 100, type=int), 500)
     offset = request.args.get('offset', 0, type=int)
     start_date = request.args.get('start_date')
@@ -298,6 +304,9 @@ def get_statistics(current_user_id, user_role):
 @token_required
 def get_statistics_for_user(current_user_id, user_role, user_id):
     """Get glucose statistics for a specific user"""
+    if str(current_user_id) != str(user_id) and user_role != 'Medico':
+        return jsonify({'error': 'No autorizado para acceder a estos datos'}), 403
+    
     hours = request.args.get('hours', 24, type=int)
     
     if hours < 1 or hours > 720:

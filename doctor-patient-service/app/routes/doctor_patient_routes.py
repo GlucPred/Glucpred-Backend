@@ -117,6 +117,10 @@ def get_patient_doctors(current_user_id, user_role, patient_user_id):
     Query params:
         - estado: 'A' (active) or 'I' (inactive) or empty (all)
     """
+    # Only the patient themselves or a doctor can access this
+    if str(current_user_id) != str(patient_user_id) and user_role != 'Medico':
+        return jsonify({'error': 'No autorizado para acceder a estos datos'}), 403
+    
     estado = request.args.get('estado', None)
     
     result, error = DoctorPatientService.get_patient_doctors(
