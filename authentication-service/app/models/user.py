@@ -15,6 +15,8 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     rol = db.Column(db.Enum('Paciente', 'Medico'), nullable=False, default='Paciente')
     primer_inicio_sesion = db.Column(db.Boolean, nullable=False, default=True)
+    failed_attempts = db.Column(db.Integer, nullable=False, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True, default=None)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -26,6 +28,24 @@ class User(db.Model):
         """Verify password against hash"""
         return check_password_hash(self.password_hash, password)
     
+    def is_locked(self):
+        from datetime import datetime
+        if self.locked_until and self.locked_until > datetime.utcnow():
+            return True
+        return False
+
+    def increment_failed_attempts(self):
+        from datetime import datetime, timedelta
+        self.failed_attempts = (self.failed_attempts or 0) + 1
+        if self.failed_attempts >= 5:
+            self.locked_until = datetime.utcnow() + timedelta(minutes=15)
+        db.session.commit()
+
+    def reset_failed_attempts(self):
+        self.failed_attempts = 0
+        self.locked_until = None
+        db.session.commit()
+
     def to_dict(self):
         """Convert user to dictionary (excluding password)"""
         return {
@@ -36,6 +56,7 @@ class User(db.Model):
             'numero_celular': self.numero_celular,
             'rol': self.rol,
             'primer_inicio_sesion': self.primer_inicio_sesion,
+            'locked_until': self.locked_until.isoformat() if self.locked_until else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
     

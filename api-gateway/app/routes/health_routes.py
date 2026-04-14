@@ -70,7 +70,12 @@ def health():
         'service': 'api-gateway',
         'services': {
             'auth': Config.AUTH_SERVICE_URL,
-            'profile': Config.PROFILE_SERVICE_URL
+            'profile': Config.PROFILE_SERVICE_URL,
+            'doctor_profile': Config.DOCTOR_PROFILE_SERVICE_URL,
+            'doctor_patient': Config.DOCTOR_PATIENT_SERVICE_URL,
+            'records': Config.RECORDS_SERVICE_URL,
+            'alerts': Config.ALERTS_SERVICE_URL,
+            'analysis': Config.ANALYSIS_SERVICE_URL,
         }
     }), 200
 
@@ -111,5 +116,50 @@ def profile_health():
     return ServiceProxy.forward_request(
         Config.PROFILE_SERVICE_URL,
         '/api/profile/health',
+        method='GET'
+    )
+
+
+@bp.route('/api/doctor-profile/health', methods=['GET'])
+def doctor_profile_health():
+    return ServiceProxy.forward_request(
+        Config.DOCTOR_PROFILE_SERVICE_URL,
+        '/api/profile/medico/health',
+        method='GET'
+    )
+
+
+@bp.route('/api/doctor-patient/health', methods=['GET'])
+def doctor_patient_health():
+    return ServiceProxy.forward_request(
+        Config.DOCTOR_PATIENT_SERVICE_URL,
+        '/api/doctor-patient/health',
+        method='GET'
+    )
+
+
+@bp.route('/api/records/health', methods=['GET'])
+def records_health():
+    return ServiceProxy.forward_request(
+        Config.RECORDS_SERVICE_URL,
+        '/api/records/health',
+        method='GET'
+    )
+
+
+@bp.route('/api/alerts/health', methods=['GET'])
+def alerts_health():
+    return ServiceProxy.forward_request(
+        Config.ALERTS_SERVICE_URL,
+        '/health',
+        method='GET'
+    )
+
+
+@bp.route('/api/analysis/health', methods=['GET'])
+def analysis_health():
+    return ServiceProxy.forward_request(
+        Config.ANALYSIS_SERVICE_URL,
+        '/api/analysis/health',
         method='GET'
     )

@@ -83,9 +83,17 @@ class AuthService:
         if not user:
             return None, {'error': 'Credenciales inválidas', 'status_code': 401}
         
+        # Check account lockout
+        if user.is_locked():
+            return None, {'error': 'Cuenta bloqueada temporalmente. Intente en 15 minutos.', 'status_code': 429}
+        
         # Verify password
         if not user.check_password(password):
+            user.increment_failed_attempts()
             return None, {'error': 'Credenciales inválidas', 'status_code': 401}
+        
+        # Successful login — reset any failed attempts counter
+        user.reset_failed_attempts()
         
         # Generate token
         token = JWTHandler.generate_token(user)
@@ -206,3 +214,43 @@ class AuthService:
             import logging
             logging.getLogger(__name__).error(f'Error al obtener usuarios: {str(e)}', exc_info=True)
             return None, 'Error al obtener usuarios'
+
+    @staticmethod
+    def reset_password(username_or_email, new_password):
+        """Reset password without requiring current password (forgot password flow)"""
+        if not username_or_email or not new_password:
+            return None, {'error': 'Usuario/correo y nueva contraseña son requeridos', 'status_code': 400}
+        if len(new_password) < 6:
+            return None, {'error': 'La contraseña debe tener al menos 6 caracteres', 'status_code': 400}
+        user = User.query.filter(
+            (User.username == username_or_email) | (User.email == username_or_email)
+        ).first()
+        if not user:
+            # Return success even if user not found (security: don't reveal existence)
+            return True, None
+        try:
+            user.set_password(new_password)
+            user.reset_failed_attempts()
+            db.session.commit()
+            return True, None
+        except Exception as e:
+            db.session.rollback()
+            return None, {'error': 'Error al actualizar contraseña', 'status_code': 500}
+
+    @staticmethod
+    def change_password(user_id, new_password):
+        """Change password for authenticated user"""
+        if not new_password:
+            return None, {'error': 'Nueva contraseña es requerida', 'status_code': 400}
+        if len(new_password) < 6:
+            return None, {'error': 'La contraseña debe tener al menos 6 caracteres', 'status_code': 400}
+        user = User.query.get(user_id)
+        if not user:
+            return None, {'error': 'Usuario no encontrado', 'status_code': 404}
+        try:
+            user.set_password(new_password)
+            db.session.commit()
+            return True, None
+        except Exception as e:
+            db.session.rollback()
+            return None, {'error': 'Error al actualizar contraseña', 'status_code': 500}

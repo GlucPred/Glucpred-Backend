@@ -79,7 +79,7 @@ services:
     container_name: glucpred-profile-db
     restart: always
     env_file: .env
-        environment:
+    environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: profile_db
       MYSQL_USER: ${PROFILE_DB_USER}
@@ -104,7 +104,7 @@ services:
     container_name: glucpred-doctor-profile-db
     restart: always
     env_file: .env
-        environment:
+    environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: doctor_profile_db
       MYSQL_USER: ${DOCTOR_PROFILE_DB_USER}
@@ -129,7 +129,7 @@ services:
     container_name: glucpred-doctor-patient-db
     restart: always
     env_file: .env
-        environment:
+    environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: doctor_patient_db
       MYSQL_USER: ${DOCTOR_PATIENT_DB_USER}
@@ -154,7 +154,7 @@ services:
     container_name: glucpred-records-db
     restart: always
     env_file: .env
-        environment:
+    environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: records_db
       MYSQL_USER: ${RECORDS_DB_USER}
@@ -179,7 +179,7 @@ services:
     container_name: glucpred-alerts-db
     restart: always
     env_file: .env
-        environment:
+    environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: alerts_db
       MYSQL_USER: ${ALERTS_DB_USER}
