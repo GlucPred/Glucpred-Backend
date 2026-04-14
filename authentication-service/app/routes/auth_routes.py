@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.services import AuthService
 from functools import wraps
+import jwt as pyjwt
 import os
 import logging
 
@@ -16,6 +17,27 @@ def internal_service_required(f):
         api_key = request.headers.get('X-Internal-Api-Key')
         if not api_key or api_key != INTERNAL_API_KEY:
             return jsonify({'error': 'Acceso no autorizado - Se requiere API key interna'}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+        if not token:
+            return jsonify({'error': 'Token de acceso requerido'}), 401
+        try:
+            secret = os.getenv('JWT_SECRET_KEY', 'glucpred-secret-key-change-in-production')
+            payload = pyjwt.decode(token, secret, algorithms=['HS256'])
+            request.current_user_id = payload.get('user_id')
+        except pyjwt.ExpiredSignatureError:
+            return jsonify({'error': 'Token expirado'}), 401
+        except pyjwt.InvalidTokenError:
+            return jsonify({'error': 'Token inválido'}), 401
         return f(*args, **kwargs)
     return decorated
 
@@ -206,3 +228,44 @@ def get_all_users():
         return jsonify({
             'error': 'Error interno del servidor'
         }), 500
+
+
+@bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """Restablecer contraseña (flujo simplificado sin verificación de correo)"""
+    try:
+        data = request.get_json()
+        username_or_email = data.get('username_or_email') if data else None
+        new_password = data.get('new_password') if data else None
+        
+        success, error = AuthService.reset_password(username_or_email, new_password)
+        
+        if success is None:
+            return jsonify({'error': error['error']}), error.get('status_code', 500)
+        
+        return jsonify({'message': 'Contraseña restablecida exitosamente'}), 200
+        
+    except Exception as e:
+        logger.error(f'Error en forgot_password: {str(e)}', exc_info=True)
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
+
+@bp.route('/change-password', methods=['PUT'])
+@token_required
+def change_password():
+    """Cambiar contraseña del usuario autenticado"""
+    try:
+        data = request.get_json()
+        new_password = data.get('new_password') if data else None
+        user_id = request.current_user_id
+        
+        success, error = AuthService.change_password(user_id, new_password)
+        
+        if success is None:
+            return jsonify({'error': error['error']}), error.get('status_code', 500)
+        
+        return jsonify({'message': 'Contraseña actualizada exitosamente'}), 200
+        
+    except Exception as e:
+        logger.error(f'Error en change_password: {str(e)}', exc_info=True)
+        return jsonify({'error': 'Error interno del servidor'}), 500

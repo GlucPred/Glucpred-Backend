@@ -136,3 +136,26 @@ def login():
         method='POST',
         data=data
     )
+
+
+@bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.get_json()
+    return ServiceProxy.forward_request(
+        Config.AUTH_SERVICE_URL,
+        '/api/auth/forgot-password',
+        method='POST',
+        data=data
+    )
+
+
+@bp.route('/change-password', methods=['PUT'])
+def change_password():
+    data = request.get_json()
+    return ServiceProxy.forward_request(
+        Config.AUTH_SERVICE_URL,
+        '/api/auth/change-password',
+        method='PUT',
+        data=data,
+        headers=dict(request.headers)
+    )
