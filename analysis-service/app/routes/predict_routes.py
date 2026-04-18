@@ -105,7 +105,7 @@ def health():
     """Health check endpoint"""
     try:
         # Verificar que el modelo se puede cargar
-        PredictionService.get_model()
+        PredictionService.get_predictor()
         return jsonify({
             'status': 'healthy',
             'service': 'analysis-service',
