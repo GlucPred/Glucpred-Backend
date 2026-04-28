@@ -167,12 +167,20 @@ class EpisodePredictor:
                 p_h = np.mean([m.predict_proba(X_ep)[:, 1] for m in self.stage2_hypo], axis=0)
                 p_hr = np.mean([m.predict_proba(X_ep)[:, 1] for m in self.stage2_hyper], axis=0)
 
+                # Normalize stage-2 probabilities so they sum to 1 within the
+                # episode branch (the two independent binary classifiers don't
+                # guarantee p_h + p_hr == 1, which caused total probs < 100%).
+                total_ep = p_h + p_hr
+                safe_total = np.where(total_ep > 0, total_ep, 1.0)
+                p_h_norm = p_h / safe_total
+                p_hr_norm = p_hr / safe_total
+
                 ep_preds = np.zeros(ep_mask.sum(), dtype=int)
-                ep_preds[p_hr >= t_hyper] = 2
-                ep_preds[p_h >= t_hypo] = 1  # hypo overrides hyper
+                ep_preds[p_hr_norm >= t_hyper] = 2
+                ep_preds[p_h_norm >= t_hypo] = 1  # hypo overrides hyper
                 y_pred[ep_mask] = ep_preds
-                prob_hypo[ep_mask] = proba_s1[ep_mask] * p_h
-                prob_hyper[ep_mask] = proba_s1[ep_mask] * p_hr
+                prob_hypo[ep_mask] = proba_s1[ep_mask] * p_h_norm
+                prob_hyper[ep_mask] = proba_s1[ep_mask] * p_hr_norm
             else:
                 proba_s2 = self.stage2.predict_proba(X[ep_mask])
                 n_s2 = proba_s2.shape[1]

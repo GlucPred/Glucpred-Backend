@@ -105,6 +105,29 @@ class PredictionService:
 
         prediction = _LABEL_MAP.get(raw_label, raw_label)
 
+        # Clinical override: if glucose is already outside safe range the patient
+        # is in an active episode regardless of the model's future-trajectory output.
+        HYPO_THRESHOLD = 70.0
+        HYPER_THRESHOLD = 180.0
+        if glucose < HYPO_THRESHOLD:
+            prediction = "Hipoglucemia"
+            # Redistribute probabilities to reflect active hypoglycemia
+            p_normal = probs_dict.get("Normal", 0.0)
+            probs_dict = {
+                "Normal": 0.0,
+                "Hipoglucemia": probs_dict.get("Hipoglucemia", 0.0) + p_normal,
+                "Hiperglucemia": probs_dict.get("Hiperglucemia", 0.0),
+            }
+        elif glucose > HYPER_THRESHOLD:
+            prediction = "Hiperglucemia"
+            # Redistribute probabilities to reflect active hyperglycemia
+            p_normal = probs_dict.get("Normal", 0.0)
+            probs_dict = {
+                "Normal": 0.0,
+                "Hipoglucemia": probs_dict.get("Hipoglucemia", 0.0),
+                "Hiperglucemia": probs_dict.get("Hiperglucemia", 0.0) + p_normal,
+            }
+
         # Nivel de alerta basado en probabilidad máxima de episodio (v6)
         max_ep_prob = max(probs_dict.get("Hipoglucemia", 0.0), probs_dict.get("Hiperglucemia", 0.0))
         if max_ep_prob >= 0.6:
