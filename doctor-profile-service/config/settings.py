@@ -1,4 +1,5 @@
 import os
+from urllib.parse import quote_plus
 
 
 class Config:
@@ -11,7 +12,10 @@ class Config:
     DB_PORT = os.getenv('DB_PORT', '3306')
     DB_NAME = os.getenv('DB_NAME', 'doctor_profile_db')
     
-    SQLALCHEMY_DATABASE_URI = f'mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+    SQLALCHEMY_DATABASE_URI = (
+        f'mysql+pymysql://{quote_plus(DB_USER)}:{quote_plus(DB_PASSWORD)}'
+        f'@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # JWT Configuration
