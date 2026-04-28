@@ -16,7 +16,7 @@ class Config:
     SQLALCHEMY_ECHO = os.getenv('SQL_ECHO', 'False').lower() == 'true'
     
     # JWT Configuration
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'default-secret-key-change-in-production')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'CHANGE-THIS-SECRET-IN-PRODUCTION')
     
     # Glucose level thresholds (mg/dL)
     GLUCOSE_LOW_THRESHOLD = 70

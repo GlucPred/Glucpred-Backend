@@ -16,7 +16,7 @@ class Config:
     SQLALCHEMY_ECHO = os.getenv('SQL_ECHO', 'False').lower() == 'true'
     
     # JWT Configuration
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'default-secret-key-change-in-production')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'CHANGE-THIS-SECRET-IN-PRODUCTION')
     
     # Service URLs for inter-service communication
     PROFILE_SERVICE_URL = os.getenv('PROFILE_SERVICE_URL', 'http://profile-service:8082')

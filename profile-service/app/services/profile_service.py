@@ -3,6 +3,9 @@ from app.extensions import db
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 from app.events import EventProducer
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ProfileService:
@@ -65,7 +68,8 @@ class ProfileService:
             return None, 'Error al crear el perfil. El usuario ya tiene un perfil.'
         except Exception as e:
             db.session.rollback()
-            return None, f'Error interno del servidor: {str(e)}'
+            logger.error(f'Error al crear perfil: {str(e)}', exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_profile(user_id):
@@ -129,7 +133,8 @@ class ProfileService:
             
         except Exception as e:
             db.session.rollback()
-            return None, f'Error interno del servidor: {str(e)}'
+            logger.error(f'Error al actualizar perfil: {str(e)}', exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def _parse_date(date_string):
@@ -168,4 +173,5 @@ class ProfileService:
             
             return profiles_with_user_info, None
         except Exception as e:
-            return None, f'Error al obtener perfiles: {str(e)}'
+            logger.error(f'Error al obtener perfiles: {str(e)}', exc_info=True)
+            return None, 'Error al obtener perfiles'

@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.middleware.auth_middleware import token_required, doctor_required
 from app.services.alert_service import AlertService
 import requests
+import os
 
 bp = Blueprint('alerts', __name__, url_prefix='/api/alerts')
 
@@ -207,7 +208,7 @@ def get_all_my_patients_alerts():
             }), 200
         
     except Exception as e:
-        return jsonify({'error': f'Error al obtener pacientes: {str(e)}'}), 500
+        return jsonify({'error': 'Error al obtener pacientes'}), 500
     
     # Parsear filtros
     alert_type_param = request.args.get('type', 'todas')
@@ -240,7 +241,10 @@ def get_all_my_patients_alerts():
     try:
         auth_response = requests.get(
             'http://authentication-service:8081/api/auth/users',
-            headers=headers,
+            headers={
+                **headers,
+                'X-Internal-Api-Key': os.getenv('INTERNAL_API_KEY', 'glucpred-internal-key-change-in-production')
+            },
             timeout=5
         )
         

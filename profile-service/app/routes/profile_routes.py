@@ -1,6 +1,9 @@
 from flask import Blueprint, request, jsonify
 from app.services import ProfileService
 from app.middleware import JWTAuthMiddleware
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 bp = Blueprint('patient_profile', __name__, url_prefix='/api/profile/paciente')
@@ -43,8 +46,9 @@ def create_profile():
         }), 201
         
     except Exception as e:
+        logger.error(f'Error al crear perfil: {str(e)}', exc_info=True)
         return jsonify({
-            'error': f'Error interno del servidor: {str(e)}'
+            'error': 'Error interno del servidor'
         }), 500
 
 
@@ -64,8 +68,9 @@ def get_profile():
         return jsonify({'profile': profile_dict}), 200
         
     except Exception as e:
+        logger.error(f'Error al obtener perfil: {str(e)}', exc_info=True)
         return jsonify({
-            'error': f'Error interno del servidor: {str(e)}'
+            'error': 'Error interno del servidor'
         }), 500
 
 
@@ -101,8 +106,9 @@ def update_profile():
         }), 200
         
     except Exception as e:
+        logger.error(f'Error al actualizar perfil: {str(e)}', exc_info=True)
         return jsonify({
-            'error': f'Error interno del servidor: {str(e)}'
+            'error': 'Error interno del servidor'
         }), 500
 
 
@@ -139,6 +145,7 @@ def get_all_profiles():
         }), 200
         
     except Exception as e:
+        logger.error(f'Error al obtener perfiles: {str(e)}', exc_info=True)
         return jsonify({
-            'error': f'Error interno del servidor: {str(e)}'
+            'error': 'Error interno del servidor'
         }), 500

@@ -2,8 +2,11 @@ import requests
 from app.services import DoctorPatientService
 from config.settings import Config
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+
+INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY', 'glucpred-internal-key-change-in-production')
 
 
 class PatientSummaryService:
@@ -47,7 +50,10 @@ class PatientSummaryService:
                 return [], None
             
             patients_summary = []
-            headers = {'Authorization': f'Bearer {auth_token}'}
+            headers = {
+                'Authorization': f'Bearer {auth_token}',
+                'X-Internal-Api-Key': INTERNAL_API_KEY
+            }
             
             # Obtener todos los usuarios y perfiles de una vez
             try:
@@ -139,8 +145,8 @@ class PatientSummaryService:
             return patients_summary, None
             
         except Exception as e:
-            logger.error(f"Error getting patients summary: {e}")
-            return None, str(e)
+            logger.error(f"Error getting patients summary: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_patient_detail(patient_user_id, doctor_user_id, auth_token, period='day'):
@@ -239,8 +245,8 @@ class PatientSummaryService:
             return patient_detail, None
             
         except Exception as e:
-            logger.error(f"Error getting patient detail: {e}")
-            return None, str(e)
+            logger.error(f"Error getting patient detail: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
     
     @staticmethod
     def get_available_patients(auth_token):
@@ -268,7 +274,10 @@ class PatientSummaryService:
             assigned_patient_ids = [p[0] for p in patients_with_doctor]
             
             # Obtener TODOS los perfiles del profile-service
-            headers = {'Authorization': f'Bearer {auth_token}'}
+            headers = {
+                'Authorization': f'Bearer {auth_token}',
+                'X-Internal-Api-Key': INTERNAL_API_KEY
+            }
             
             try:
                 profile_response = requests.get(
@@ -384,5 +393,5 @@ class PatientSummaryService:
             return available_patients, None
             
         except Exception as e:
-            logger.error(f"Error getting available patients: {e}")
-            return None, str(e)
+            logger.error(f"Error getting available patients: {e}", exc_info=True)
+            return None, 'Error interno del servidor'
