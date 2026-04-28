@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 ANALYSIS_SERVICE_URL = os.getenv('ANALYSIS_SERVICE_URL', 'http://analysis-service:5000')
-RECORDS_SERVICE_URL = os.getenv('RECORDS_SERVICE_URL', 'http://records-service:5000')
+RECORDS_SERVICE_URL = os.getenv('RECORDS_SERVICE_URL', 'http://records-service:8085')
 
 bp = Blueprint('analysis', __name__, url_prefix='/api/analysis')
 
@@ -109,10 +109,11 @@ def predict():
         }
         
         glucose_resp = requests.post(
-            f"{RECORDS_SERVICE_URL}/api/records",
+            f"{RECORDS_SERVICE_URL}/api/records/",
             json=glucose_data,
             headers=headers,
-            timeout=10
+            timeout=10,
+            allow_redirects=False,
         )
         
         # Continuar incluso si falla el guardado de glucosa (logging)
