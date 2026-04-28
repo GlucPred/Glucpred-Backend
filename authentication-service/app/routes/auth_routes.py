@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.services import AuthService
+from app.services.verification_service import VerificationService
 from functools import wraps
 import jwt as pyjwt
 import os
@@ -48,36 +49,60 @@ bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 @bp.route('/register', methods=['POST'])
 def register():
     """
-    Register a new user
-    Expected JSON:
-    {
-        "nombre_completo": "string",
-        "username": "string",
-        "email": "string",
-        "numero_celular": "string" (optional),
-        "password": "string",
-        "confirmar_password": "string",
-        "rol": "Paciente" or "Medico" (default: "Paciente")
-    }
+    Step 1 of registration: validate data and send 6-digit OTP to email.
+    Expected JSON: nombre_completo, username, email, numero_celular, password, confirmar_password, rol
+    Returns: { "message": "...", "email": "user@example.com" }
     """
     try:
         data = request.get_json()
-        user_dict, token = AuthService.register_user(data)
-        
+        if not data:
+            return jsonify({'error': 'Datos requeridos'}), 400
+
+        email, err = VerificationService.initiate_registration(data)
+        if email is None:
+            return jsonify({'error': err['error']}), err.get('status_code', 500)
+
+        return jsonify({
+            'message': 'Código de verificación enviado a tu correo electrónico',
+            'email': email,
+        }), 200
+
+    except Exception as e:
+        logger.error(f'Error en register: {str(e)}', exc_info=True)
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
+
+@bp.route('/register/verify', methods=['POST'])
+def register_verify():
+    """
+    Step 2 of registration: verify OTP and create user account.
+    Expected JSON: { "email": "...", "code": "123456" }
+    Returns: { "message": "...", "user": {...}, "access_token": "..." }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Datos requeridos'}), 400
+
+        email = data.get('email', '').strip()
+        code = data.get('code', '').strip()
+
+        if not email or not code:
+            return jsonify({'error': 'Email y código son requeridos'}), 400
+
+        user_dict, token = VerificationService.confirm_registration(email, code)
         if user_dict is None:
             return jsonify({'error': token['error']}), token.get('status_code', 500)
-        
+
         return jsonify({
             'message': 'Usuario registrado exitosamente',
             'user': user_dict,
-            'access_token': token
+            'access_token': token,
         }), 201
-        
+
     except Exception as e:
-        logger.error(f'Error en registro: {str(e)}', exc_info=True)
-        return jsonify({
-            'error': 'Error interno del servidor'
-        }), 500
+        logger.error(f'Error en register_verify: {str(e)}', exc_info=True)
+        return jsonify({'error': 'Error interno del servidor'}), 500
 
 
 @bp.route('/login', methods=['POST'])
@@ -232,21 +257,55 @@ def get_all_users():
 
 @bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
-    """Restablecer contraseña (flujo simplificado sin verificación de correo)"""
+    """
+    Step 1 of password reset: send OTP to the user's registered email.
+    Expected JSON: { "username_or_email": "..." }
+    Returns: { "message": "...", "masked_email": "us***@example.com" }
+    """
     try:
         data = request.get_json()
-        username_or_email = data.get('username_or_email') if data else None
-        new_password = data.get('new_password') if data else None
-        
-        success, error = AuthService.reset_password(username_or_email, new_password)
-        
-        if success is None:
-            return jsonify({'error': error['error']}), error.get('status_code', 500)
-        
-        return jsonify({'message': 'Contraseña restablecida exitosamente'}), 200
-        
+        username_or_email = (data.get('username_or_email') or '').strip() if data else ''
+
+        masked_email, err = VerificationService.send_password_reset_code(username_or_email)
+        if masked_email is None:
+            return jsonify({'error': err['error']}), err.get('status_code', 500)
+
+        return jsonify({
+            'message': 'Si el usuario existe, recibirás un código en tu correo registrado',
+            'masked_email': masked_email,
+        }), 200
+
     except Exception as e:
         logger.error(f'Error en forgot_password: {str(e)}', exc_info=True)
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
+
+@bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """
+    Step 2 of password reset: verify OTP and set new password.
+    Expected JSON: { "username_or_email": "...", "code": "123456", "new_password": "..." }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Datos requeridos'}), 400
+
+        username_or_email = (data.get('username_or_email') or '').strip()
+        code = (data.get('code') or '').strip()
+        new_password = data.get('new_password') or ''
+
+        if not username_or_email or not code or not new_password:
+            return jsonify({'error': 'Usuario/correo, código y nueva contraseña son requeridos'}), 400
+
+        success, err = VerificationService.confirm_password_reset(username_or_email, code, new_password)
+        if success is None:
+            return jsonify({'error': err['error']}), err.get('status_code', 500)
+
+        return jsonify({'message': 'Contraseña restablecida exitosamente'}), 200
+
+    except Exception as e:
+        logger.error(f'Error en reset_password: {str(e)}', exc_info=True)
         return jsonify({'error': 'Error interno del servidor'}), 500
 
 

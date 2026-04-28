@@ -9,14 +9,13 @@ bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 @bp.route('/register', methods=['POST'])
 def register():
     """
-    Registrar un nuevo usuario
+    Registrar un nuevo usuario — Paso 1: envía código OTP al email
     ---
     tags:
       - Authentication
     parameters:
       - in: body
         name: body
-        description: Datos del nuevo usuario
         required: true
         schema:
           type: object
@@ -41,26 +40,17 @@ def register():
               example: "1234567890"
             password:
               type: string
-              example: "password123"
+              example: "Password123"
             confirmar_password:
               type: string
-              example: "password123"
+              example: "Password123"
             rol:
               type: string
               enum: ["Paciente", "Medico"]
               example: "Paciente"
     responses:
-      201:
-        description: Usuario registrado exitosamente
-        schema:
-          type: object
-          properties:
-            message:
-              type: string
-            user:
-              type: object
-            access_token:
-              type: string
+      200:
+        description: Código OTP enviado al correo electrónico
       400:
         description: Datos inválidos
       409:
@@ -70,6 +60,44 @@ def register():
     return ServiceProxy.forward_request(
         Config.AUTH_SERVICE_URL,
         '/api/auth/register',
+        method='POST',
+        data=data
+    )
+
+
+@bp.route('/register/verify', methods=['POST'])
+def register_verify():
+    """
+    Registrar un nuevo usuario — Paso 2: verificar OTP y crear cuenta
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - email
+            - code
+          properties:
+            email:
+              type: string
+              example: "juan@example.com"
+            code:
+              type: string
+              example: "123456"
+    responses:
+      201:
+        description: Usuario creado y JWT generado
+      400:
+        description: Código inválido o expirado
+    """
+    data = request.get_json()
+    return ServiceProxy.forward_request(
+        Config.AUTH_SERVICE_URL,
+        '/api/auth/register/verify',
         method='POST',
         data=data
     )
@@ -140,10 +168,23 @@ def login():
 
 @bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
+    """Recuperar contraseña — Paso 1: enviar OTP al correo registrado"""
     data = request.get_json()
     return ServiceProxy.forward_request(
         Config.AUTH_SERVICE_URL,
         '/api/auth/forgot-password',
+        method='POST',
+        data=data
+    )
+
+
+@bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """Recuperar contraseña — Paso 2: verificar OTP y establecer nueva contraseña"""
+    data = request.get_json()
+    return ServiceProxy.forward_request(
+        Config.AUTH_SERVICE_URL,
+        '/api/auth/reset-password',
         method='POST',
         data=data
     )
