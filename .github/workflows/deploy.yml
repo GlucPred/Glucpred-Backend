@@ -1,0 +1,58 @@
+name: Deploy Backend to VPS
+
+on:
+  push:
+    branches:
+      - test
+      - main
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Servicio a redesplegar (all / api-gateway / analysis-service / etc.)'
+        required: false
+        default: 'all'
+
+jobs:
+  deploy:
+    name: Build & Deploy on VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH into VPS and deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 20m
+          script: |
+            set -e
+            cd ${{ secrets.VPS_APP_PATH }}
+
+            echo "=== Git pull ==="
+            git fetch origin
+            git checkout ${{ github.ref_name }}
+            git pull origin ${{ github.ref_name }}
+
+            echo "=== Entrando a api-gateway ==="
+            cd api-gateway
+
+            SERVICE="${{ github.event.inputs.service }}"
+            if [ -z "$SERVICE" ] || [ "$SERVICE" = "all" ]; then
+              echo "=== Build todos los servicios ==="
+              docker compose build --no-cache
+              echo "=== Up all services ==="
+              docker compose up -d --remove-orphans
+            else
+              echo "=== Build $SERVICE ==="
+              docker compose build --no-cache "$SERVICE"
+              echo "=== Up $SERVICE ==="
+              docker compose up -d "$SERVICE"
+            fi
+
+            echo "=== Limpieza de imágenes huérfanas ==="
+            docker image prune -f
+
+            echo "=== Deploy completado: $(date) ==="
+            echo "=== Estado de contenedores ==="
+            docker compose ps

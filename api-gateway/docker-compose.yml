@@ -204,6 +204,9 @@ services:
   
   # Authentication Service
   authentication-service:
+    build:
+      context: ../authentication-service
+      dockerfile: Dockerfile
     image: atahualpa365/authentication-service:latest
     container_name: glucpred-auth-service
     restart: always
@@ -235,6 +238,9 @@ services:
 
   # Profile Service
   profile-service:
+    build:
+      context: ../profile-service
+      dockerfile: Dockerfile
     image: atahualpa365/profile-service:latest
     container_name: glucpred-profile-service
     restart: always
@@ -264,6 +270,9 @@ services:
 
   # Doctor Profile Service
   doctor-profile-service:
+    build:
+      context: ../doctor-profile-service
+      dockerfile: Dockerfile
     image: atahualpa365/doctor-profile-service:latest
     container_name: glucpred-doctor-profile-service
     restart: always
@@ -297,6 +306,9 @@ services:
 
   # Doctor-Patient Relationship Service
   doctor-patient-service:
+    build:
+      context: ../doctor-patient-service
+      dockerfile: Dockerfile
     image: atahualpa365/doctor-patient-service:latest
     container_name: glucpred-doctor-patient-service
     restart: always
@@ -331,6 +343,9 @@ services:
 
   # Records Service
   records-service:
+    build:
+      context: ../records-service
+      dockerfile: Dockerfile
     image: atahualpa365/records-service:latest
     container_name: glucpred-records-service
     restart: always
@@ -364,6 +379,9 @@ services:
 
   # Alerts Service
   alerts-service:
+    build:
+      context: ../alerts-service
+      dockerfile: Dockerfile
     image: atahualpa365/alerts-service:latest
     container_name: glucpred-alerts-service
     restart: always
@@ -398,6 +416,9 @@ services:
       retries: 3
   # Analysis Service (ML Predictions)
   analysis-service:
+    build:
+      context: ../analysis-service
+      dockerfile: Dockerfile
     image: atahualpa365/analysis-service:latest
     container_name: glucpred-analysis-service
     restart: always
@@ -432,6 +453,9 @@ services:
   # ==========================================
   
   api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: atahualpa365/api-gateway:latest
     container_name: glucpred-api-gateway
     restart: always
