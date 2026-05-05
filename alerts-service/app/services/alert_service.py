@@ -26,11 +26,14 @@ def _notify_realtime(alert, patient_user_id: int):
     1. Publica alert.created en Kafka → api-gateway emitirá vía Socket.IO
     2. Envía FCM push al paciente y a sus médicos asignados
     """
+    doctor_ids = _get_doctor_ids_for_patient(patient_user_id)
+
     try:
         from app.events.kafka_producer import publish_alert_created
         publish_alert_created(
             alert_id=alert.id,
             user_id=patient_user_id,
+            doctor_ids=doctor_ids,
             title=alert.title,
             message=alert.message,
             severity=alert.severity,
@@ -41,7 +44,7 @@ def _notify_realtime(alert, patient_user_id: int):
 
     try:
         from app.services.fcm_service import send_alert_to_users
-        recipient_ids = [patient_user_id] + _get_doctor_ids_for_patient(patient_user_id)
+        recipient_ids = [patient_user_id] + doctor_ids
         send_alert_to_users(
             user_ids=recipient_ids,
             title=alert.title,

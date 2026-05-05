@@ -18,16 +18,17 @@ def _get_producer():
     return _producer
 
 
-def publish_alert_created(alert_id: int, user_id: int, title: str, message: str,
-                          severity: str, alert_type: str):
+def publish_alert_created(alert_id: int, user_id: int, doctor_ids: list,
+                          title: str, message: str, severity: str, alert_type: str):
     """
     Publica el evento alert.created en Kafka para que el api-gateway
-    lo redistribuya vía Socket.IO a los clientes conectados.
+    lo redistribuya vía Socket.IO al paciente y a sus médicos asignados.
     """
     try:
         payload = {
             'alert_id': alert_id,
             'user_id': user_id,
+            'doctor_ids': doctor_ids,
             'title': title,
             'message': message,
             'severity': severity,

@@ -46,9 +46,17 @@ class AlertKafkaConsumer:
                     if not user_id:
                         continue
 
-                    room = f"user_{user_id}"
-                    self.socketio.emit('alert:new', data, room=room)
-                    logger.info(f"Emitted alert:new to room {room}: {data.get('title')}")
+                    # Emit to patient's room
+                    patient_room = f"user_{user_id}"
+                    self.socketio.emit('alert:new', data, room=patient_room)
+                    logger.info(f"Emitted alert:new to room {patient_room}: {data.get('title')}")
+
+                    # Emit to all assigned doctor rooms
+                    for doctor_id in data.get('doctor_ids', []):
+                        doctor_room = f"user_{doctor_id}"
+                        self.socketio.emit('alert:new', data, room=doctor_room)
+                        logger.info(f"Emitted alert:new to doctor room {doctor_room}")
+
                 except Exception as e:
                     logger.error(f"Error emitting socket event: {e}")
 
