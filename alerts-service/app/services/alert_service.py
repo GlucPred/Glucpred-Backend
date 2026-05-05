@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def _get_doctor_ids_for_patient(patient_user_id: int) -> list:
     """Consulta doctor-patient-service para obtener los médicos del paciente."""
     try:
-        url = f"{Config.DOCTOR_PATIENT_SERVICE_URL}/internal/doctors-by-patient/{patient_user_id}"
+        url = f"{Config.DOCTOR_PATIENT_SERVICE_URL}/api/doctor-patient/internal/doctors-by-patient/{patient_user_id}"
         resp = requests.get(url, headers={'X-Internal-Api-Key': Config.INTERNAL_API_KEY}, timeout=3)
         if resp.status_code == 200:
             return resp.json().get('doctor_ids', [])
