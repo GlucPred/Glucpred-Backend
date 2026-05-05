@@ -1,5 +1,4 @@
 import json
-import threading
 import logging
 from kafka import KafkaConsumer
 from config.settings import Config
@@ -11,6 +10,10 @@ class AlertKafkaConsumer:
     """
     Consume el topic alert.created publicado por alerts-service
     y emite el evento alert:new vía Socket.IO a las salas correspondientes.
+
+    IMPORTANT: run.py usa eventlet.monkey_patch(), lo que rompe el I/O
+    bloqueante de kafka-python. Por eso _consume() se ejecuta en un
+    thread nativo real via eventlet.tpool.execute().
     """
 
     def __init__(self, socketio):
@@ -21,9 +24,13 @@ class AlertKafkaConsumer:
         if self.running:
             return
         self.running = True
-        thread = threading.Thread(target=self._consume, daemon=True)
-        thread.start()
-        logger.info("Alert Kafka consumer thread started")
+        import eventlet
+        eventlet.spawn(self._run_in_tpool)
+        logger.info("Alert Kafka consumer started (eventlet tpool)")
+
+    def _run_in_tpool(self):
+        from eventlet import tpool
+        tpool.execute(self._consume)
 
     def _consume(self):
         try:
