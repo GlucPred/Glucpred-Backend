@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from app.middleware.auth_middleware import token_required, doctor_required
 from app.services.alert_service import AlertService
+from app.models.fcm_token import FcmToken
+from app.extensions import db
 import requests
 import os
 
@@ -322,3 +324,32 @@ def get_patient_critical_count(patient_id):
         'critical_count': count,
         'period_hours': hours
     }), 200
+
+
+@bp.route('/fcm-token', methods=['POST'])
+@token_required
+def register_fcm_token():
+    """
+    Registra o actualiza el FCM token del dispositivo del usuario autenticado.
+
+    Body:
+        { "token": "<fcm_registration_token>", "platform": "android" }
+    """
+    user_id = request.user_id
+    data = request.get_json()
+
+    if not data or not data.get('token'):
+        return jsonify({'error': 'El campo token es requerido'}), 400
+
+    token = data['token'].strip()
+    platform = data.get('platform', 'android')
+
+    existing = FcmToken.query.filter_by(user_id=user_id).first()
+    if existing:
+        existing.token = token
+        existing.platform = platform
+    else:
+        db.session.add(FcmToken(user_id=user_id, token=token, platform=platform))
+
+    db.session.commit()
+    return jsonify({'message': 'FCM token registrado correctamente'}), 200

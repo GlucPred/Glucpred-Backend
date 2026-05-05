@@ -2,6 +2,9 @@ from flask import Flask
 from flask_cors import CORS
 from app.routes import auth_routes, profile_routes, doctor_profile_routes, doctor_patient_routes, records_routes, alerts_routes, health_routes, analysis_routes
 from app.swagger_config import init_swagger
+from app.sockets import socketio
+from app.sockets import handlers  # noqa: F401 — registers socket event handlers
+from app.kafka.alert_consumer import AlertKafkaConsumer
 from config.settings import Config
 
 
@@ -16,6 +19,9 @@ def create_app():
         'http://127.0.0.1:*',
     ], supports_credentials=True)
     
+    # Initialize Socket.IO
+    socketio.init_app(app)
+    
     # Initialize Swagger
     init_swagger(app)
     
@@ -28,6 +34,10 @@ def create_app():
     app.register_blueprint(alerts_routes.bp)
     app.register_blueprint(analysis_routes.bp)
     app.register_blueprint(health_routes.bp)
+
+    # Start Kafka → Socket.IO bridge
+    alert_consumer = AlertKafkaConsumer(socketio)
+    alert_consumer.start()
 
     @app.after_request
     def add_security_headers(response):

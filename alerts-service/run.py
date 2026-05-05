@@ -2,6 +2,7 @@ from flask import Flask
 from app.extensions import db, cors
 from app.routes import alert_routes
 from app.events.kafka_consumer import GlucoseEventConsumer
+from app.models import alert, fcm_token  # noqa: F401 — ensure models are registered for db.create_all()
 from config.settings import Config
 import logging
 

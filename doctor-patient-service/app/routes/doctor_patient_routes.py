@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from app.services import DoctorPatientService, MedicalObservationService, PatientSummaryService
 from app.middleware.auth_middleware import doctor_required, token_required
+from app.models import DoctorPatientRelation
+from config.settings import Config
 import logging
 
 logger = logging.getLogger(__name__)
@@ -382,4 +384,27 @@ def delete_observation(current_user_id, user_role, observation_id):
     return jsonify({
         'message': 'Observación eliminada exitosamente'
     }), 200
+
+
+# ---------------------------------------------------------------------------
+# Internal endpoints — service-to-service only (X-Internal-Api-Key required)
+# ---------------------------------------------------------------------------
+
+@bp.route('/internal/doctors-by-patient/<int:patient_id>', methods=['GET'])
+def get_doctors_by_patient(patient_id):
+    """
+    Devuelve los IDs de los médicos asignados activamente a un paciente.
+    Solo accesible con X-Internal-Api-Key (llamado desde alerts-service).
+    """
+    api_key = request.headers.get('X-Internal-Api-Key')
+    if api_key != Config.INTERNAL_API_KEY:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    relations = DoctorPatientRelation.query.filter_by(
+        patient_user_id=patient_id,
+        estado='A'
+    ).all()
+
+    doctor_ids = [r.doctor_user_id for r in relations]
+    return jsonify({'patient_id': patient_id, 'doctor_ids': doctor_ids}), 200
 

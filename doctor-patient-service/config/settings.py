@@ -22,6 +22,9 @@ class Config:
     # JWT Configuration
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'CHANGE-THIS-SECRET-IN-PRODUCTION')
     
+    # Internal API key for service-to-service calls
+    INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY', 'change-this-internal-key')
+    
     # Service URLs for inter-service communication
     PROFILE_SERVICE_URL = os.getenv('PROFILE_SERVICE_URL', 'http://profile-service:8082')
     DOCTOR_PROFILE_SERVICE_URL = os.getenv('DOCTOR_PROFILE_SERVICE_URL', 'http://doctor-profile-service:8083')

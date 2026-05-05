@@ -21,7 +21,18 @@ class Config:
     # Kafka
     KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
     KAFKA_TOPIC_GLUCOSE_RECORDED = 'glucose.recorded'
+    KAFKA_TOPIC_ALERT_CREATED = 'alert.created'
     KAFKA_GROUP_ID = 'alerts-service-group'
+    
+    # Firebase Admin SDK
+    FIREBASE_CREDENTIALS_PATH = os.getenv(
+        'FIREBASE_CREDENTIALS_PATH',
+        '/app/credentials/firebase-adminsdk.json'
+    )
+    
+    # Internal service communication
+    INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY', 'change-this-internal-key')
+    DOCTOR_PATIENT_SERVICE_URL = os.getenv('DOCTOR_PATIENT_SERVICE_URL', 'http://doctor-patient-service:8084')
     
     # Server
     PORT = int(os.getenv('PORT', 8086))

@@ -59,3 +59,9 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Firebase / Google credentials (secrets — never commit)
+*-adminsdk-*.json
+google-services.json
+credentials/firebase-adminsdk.json
+*/credentials/firebase-adminsdk.json

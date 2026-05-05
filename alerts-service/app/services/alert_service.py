@@ -1,6 +1,59 @@
 from datetime import datetime, timedelta
 from app.models.alert import Alert
 from app.extensions import db
+import logging
+import requests
+from config.settings import Config
+
+logger = logging.getLogger(__name__)
+
+
+def _get_doctor_ids_for_patient(patient_user_id: int) -> list:
+    """Consulta doctor-patient-service para obtener los médicos del paciente."""
+    try:
+        url = f"{Config.DOCTOR_PATIENT_SERVICE_URL}/internal/doctors-by-patient/{patient_user_id}"
+        resp = requests.get(url, headers={'X-Internal-Api-Key': Config.INTERNAL_API_KEY}, timeout=3)
+        if resp.status_code == 200:
+            return resp.json().get('doctor_ids', [])
+    except Exception as e:
+        logger.warning(f"Could not fetch doctors for patient {patient_user_id}: {e}")
+    return []
+
+
+def _notify_realtime(alert, patient_user_id: int):
+    """
+    Tras crear una alerta:
+    1. Publica alert.created en Kafka → api-gateway emitirá vía Socket.IO
+    2. Envía FCM push al paciente y a sus médicos asignados
+    """
+    try:
+        from app.events.kafka_producer import publish_alert_created
+        publish_alert_created(
+            alert_id=alert.id,
+            user_id=patient_user_id,
+            title=alert.title,
+            message=alert.message,
+            severity=alert.severity,
+            alert_type=alert.alert_type,
+        )
+    except Exception as e:
+        logger.error(f"Kafka publish failed for alert {alert.id}: {e}")
+
+    try:
+        from app.services.fcm_service import send_alert_to_users
+        recipient_ids = [patient_user_id] + _get_doctor_ids_for_patient(patient_user_id)
+        send_alert_to_users(
+            user_ids=recipient_ids,
+            title=alert.title,
+            body=alert.message,
+            data={
+                'alert_id': str(alert.id),
+                'severity': alert.severity,
+                'alert_type': alert.alert_type,
+            }
+        )
+    except Exception as e:
+        logger.error(f"FCM notification failed for alert {alert.id}: {e}")
 
 class AlertService:
     """
@@ -98,6 +151,8 @@ class AlertService:
         db.session.add(alert)
         db.session.commit()
         
+        _notify_realtime(alert, user_id)
+        
         return alert
     
     @staticmethod
@@ -163,6 +218,8 @@ class AlertService:
         
         db.session.add(alert)
         db.session.commit()
+        
+        _notify_realtime(alert, user_id)
         
         return alert
     

@@ -16,6 +16,11 @@ class Config:
     # JWT Configuration
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'CHANGE-THIS-SECRET-IN-PRODUCTION')
     
+    # Kafka
+    KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:29092')
+    KAFKA_TOPIC_ALERT_CREATED = 'alert.created'
+    KAFKA_GROUP_ID = 'gateway-alert-consumer'
+    
     # Request configuration
     REQUEST_TIMEOUT = int(os.getenv('REQUEST_TIMEOUT', 30))
     
