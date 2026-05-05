@@ -1,6 +1,14 @@
 import eventlet
 eventlet.monkey_patch()
 
+import logging
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stdout,
+    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+)
+
 from app import create_app
 from app.sockets import socketio
 
